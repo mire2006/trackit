@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente FormularioReparacion</h2>
-      <p>Este componente permitirá crear y editar reparaciones.</p>
+      <p>Crear y editar reparaciones.</p>
     </div>
   </template>
   

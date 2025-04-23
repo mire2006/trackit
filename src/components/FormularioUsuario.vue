@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente FormularioUsuario</h2>
-      <p>Este componente permitirá crear y editar usuarios.</p>
+      <p>Crear y editar usuarios.</p>
     </div>
   </template>
   

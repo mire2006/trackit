@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente FormularioBomba</h2>
-      <p>Este componente permitirá crear y editar bombas.</p>
+      <p>Crear y editar bombas.</p>
     </div>
   </template>
   

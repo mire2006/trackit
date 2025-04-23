@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente AlertaMensaje</h2>
-      <p>Este componente mostrará mensajes de alerta o éxito.</p>
+      <p>Este componente muestra mensajes de alerta o éxito.</p>
     </div>
   </template>
   

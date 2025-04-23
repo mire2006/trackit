@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente TablaUsuarios</h2>
-      <p>Este componente mostrará la lista de usuarios.</p>
+      <p>Lista de usuarios.</p>
     </div>
   </template>
   

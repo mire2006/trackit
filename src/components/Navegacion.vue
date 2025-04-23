@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente Navegacion</h2>
-      <p>Este componente será el menú de navegación.</p>
+      <p>Menú de navegación.</p>
     </div>
   </template>
   

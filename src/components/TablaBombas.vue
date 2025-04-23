@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente TablaBombas</h2>
-      <p>Este componente mostrará la lista de bombas.</p>
+      <p>Lista de bombas.</p>
     </div>
   </template>
   

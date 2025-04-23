@@ -1,7 +1,7 @@
 <template>
     <div>
       <h2>Componente TablaReparaciones</h2>
-      <p>Este componente mostrará la lista de reparaciones.</p>
+      <p>Lista de reparaciones.</p>
     </div>
   </template>
   
