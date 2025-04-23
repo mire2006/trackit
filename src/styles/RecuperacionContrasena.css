@@ -1,0 +1,59 @@
+.recuperacion-container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  
+  p {
+    text-align: center;
+    color: #666;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .recuperar-button {
+    background-color: #4e4b4c;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+  }
+  
+  .recuperar-button:hover {
+    background-color: #4e4b4c;
+  }
+  
+  .mensaje {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #e2f3ff;
+    border: 1px solid #b8daff;
+    border-radius: 4px;
+    text-align: center;
+  }
+  

@@ -1,0 +1,22 @@
+main {
+    margin-top: 40px;
+    flex-grow: 1;
+  }
+  
+  h1 {
+    color: #4e4b4c;
+  }
+  
+  p {
+    font-size: 1.2em;
+    color: #888;
+    margin-bottom: 20px;
+  }
+  
+  .qr-scan-image {
+    max-width: 50%;
+    height: auto;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  
