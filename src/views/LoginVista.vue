@@ -41,14 +41,19 @@ export default {
         localStorage.setItem('token', 'fake_token');
         localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
 
-        this.$router.push('/');
+        this.$router.push('/dashboard'); 
+
       } catch (error) {
+        console.error("Error en login:", error); 
         if (error.response) {
-          this.error = error.response.data.mensaje || 'Error al iniciar sesión.';
+          
+          this.error = error.response.data.mensaje || 'Error en las credenciales o el usuario no existe.';
         } else if (error.request) {
-          this.error = 'No se pudo conectar con el servidor.';
+
+          this.error = 'No se pudo conectar con el servidor. Inténtalo más tarde.';
         } else {
-          this.error = 'Error inesperado.';
+
+          this.error = 'Ocurrió un error inesperado al intentar iniciar sesión.';
         }
       }
     },
