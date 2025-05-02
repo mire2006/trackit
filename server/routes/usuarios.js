@@ -6,7 +6,6 @@ const bombasModel = require('../models/bombas');
 const clientesModel = require('../models/clientes');
 const reparacionesModel = require('../models/reparaciones');
 const historicoModel = require('../models/historicoReparaciones');
-const tecnicosModel = require('../models/tecnicos');
 
 const verificarAutenticacion = (req, res, next) => {
   if (!req.session.usuario) {
@@ -43,7 +42,7 @@ router.post('/login', async (req, res) => {
 
     const contrasenaValida = await bcrypt.compare(contrasena, user.Contrasena);
     if (!contrasenaValida) {
-      return res.status(401).json({ mensaje: 'Credenciales incorrectas.' });
+      return res.status(401).json({ mensaje: '¡Contraseña incorrecta!' });
     }
 
     req.session.usuario = {
@@ -168,4 +167,3 @@ router.delete('/:id', verificarRol(['administrador']), async (req, res) => {
 
 
 module.exports = router;
-
