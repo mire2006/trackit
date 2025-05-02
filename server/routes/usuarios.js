@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const usuariosModel = require('../models/usuarios');
 const bcrypt = require('bcrypt');
-const bombasModel = require('../models/bombas');
-const clientesModel = require('../models/clientes');
-const reparacionesModel = require('../models/reparaciones');
-const historicoModel = require('../models/historicoReparaciones');
+
 
 const verificarAutenticacion = (req, res, next) => {
   if (!req.session.usuario) {

@@ -7,7 +7,6 @@ import BombasVista from '../views/BombasVista.vue';
 import ReparacionesVista from '../views/ReparacionesVista.vue';
 import UsuariosVista from '../views/UsuariosVista.vue';
 import ReparacionDetalle from '../views/ReparacionDetalle.vue';
-import HistoricoReparaciones from '../views/HistoricoReparaciones.vue';
 import RecuperacionContrasenaVista from '../views/RecuperacionContrasenaVista.vue';
 import DashboardVista from '../views/DashboardVista.vue';
 
@@ -126,23 +125,8 @@ const router = createRouter({
         },
       ],
     },
-    {
-      path: '/historico/bomba/:id',
-      component: LayoutVista,
-      children: [
-        {
-          path: '',
-          name: 'historicoReparaciones',
-          component: HistoricoReparaciones,
-          meta: {
-            requiresAuth: true,
-            roles: ['administrador', 'operador', 'tecnico'],
-          },
-        },
-      ],
-    },
-  ],
-});
+    ],
+  });
 
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
