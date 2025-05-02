@@ -6,7 +6,7 @@
       </router-link>
 
       <div class="header-right"> 
-        <nav class="login-menu" v-if="!isLoggedIn && route.path !== '/login'"> 
+        <nav class="login-menu" v-if="!isLoggedIn && route.path !== '/login' && route.path !== '/recuperar-contrasena'"> 
           <router-link to="/login" class="login-button">Iniciar Sesión</router-link>
         </nav>
 
@@ -36,9 +36,9 @@ const isLoggedIn = ref(false);
 const route = useRoute(); 
 
 const checkAuthStatus = () => {
-  const token = localStorage.getItem('token');
-  const userData = localStorage.getItem('usuario');
-  isLoggedIn.value = !!token && !!userData; 
+  const usuarioDataString = localStorage.getItem('usuario');
+  isLoggedIn.value = !!usuarioDataString; 
+  console.log('Datos Usuario en localStorage:', usuarioDataString);
   console.log('Estado LoggedIn en Layout:', isLoggedIn.value);
 };
 
@@ -46,14 +46,12 @@ onMounted(() => {
   checkAuthStatus();
 });
 
-
 watch(
   () => route.path,
   () => {
     checkAuthStatus();
   }
 );
-
 </script>
 
 <style>
@@ -79,4 +77,3 @@ main {
 }
 
 </style>
-

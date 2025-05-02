@@ -27,7 +27,6 @@ const verificarRol = (rolesPermitidos) => {
   };
 };
 
-
 router.post('/login', async (req, res) => {
   console.log('Petición a /api/usuarios/login recibida:', req.body);
   try {
@@ -77,7 +76,6 @@ router.post('/logout', (req, res) => {
         res.json({ mensaje: 'Sesión cerrada exitosamente.' });
     });
 });
-
 
 router.get('/me', verificarAutenticacion, async (req, res) => {
   try {
@@ -162,7 +160,7 @@ router.delete('/:id', verificarRol(['administrador']), async (req, res) => {
   } catch (error) {
     console.error(`Error en DELETE /usuarios/${req.params.id}:`, error);
     if (error.code === 'ER_ROW_IS_REFERENCED_2') { 
-        return res.status(409).json({ mensaje: 'No se puede eliminar el usuario porque tiene registros asociados (reparaciones, etc.).' });
+        return res.status(409).json({ mensaje: 'No se puede eliminar el usuario porque tiene registros asociados.' });
     }
     res.status(500).json({ mensaje: 'Error al eliminar usuario.', error: error.message });
   }

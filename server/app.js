@@ -5,14 +5,21 @@ const app = express();
 require('dotenv').config();
 const path = require('path');
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:8080',
+  credentials: true
+}));
 app.use(express.json());
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'mi_secreto', 
+    secret: process.env.SESSION_SECRET || 'mi_secreto',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, 
+    saveUninitialized: true, 
+    cookie: { 
+        secure: false, 
+        httpOnly: true, 
+        sameSite: 'lax' 
+       }, 
   })
 );
 

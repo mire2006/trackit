@@ -4,8 +4,8 @@
     <div v-if="error" class="error-message">{{ error }}</div>
     <form @submit.prevent="login">
       <div class="form-group">
-        <label for="usuario">Usuario:</label>
-        <input type="text" id="usuario" v-model="usuario" required>
+        <label for="email">Email:</label>
+        <input type="email" id="email" v-model="email" required>
       </div>
       <div class="form-group">
         <label for="contrasena">Contraseña:</label>
@@ -24,35 +24,32 @@ export default {
   name: 'LoginVista',
   data() {
     return {
-      usuario: '',
+      email: '', 
       contrasena: '',
       error: null,
     };
   },
   methods: {
     async login() {
+      this.error = null; 
       try {
         const response = await axios.post('/api/usuarios/login', {
-          usuario: this.usuario,
+          email: this.email, 
           contrasena: this.contrasena,
         });
 
-        // Simulación de guardar el token (¡Tengo que cambiarlo, que no se me olvide!)
-        localStorage.setItem('token', 'fake_token');
-        localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
+        localStorage.setItem('usuario', JSON.stringify(response.data.usuario)); 
+        console.log('Usuario guardado en localStorage:', response.data.usuario);
 
         this.$router.push('/dashboard'); 
 
       } catch (error) {
         console.error("Error en login:", error); 
         if (error.response) {
-          
-          this.error = error.response.data.mensaje || 'Error en las credenciales o el usuario no existe.';
+          this.error = error.response.data.mensaje || 'Error en las credenciales.';
         } else if (error.request) {
-
           this.error = 'No se pudo conectar con el servidor. Inténtalo más tarde.';
         } else {
-
           this.error = 'Ocurrió un error inesperado al intentar iniciar sesión.';
         }
       }
@@ -64,3 +61,4 @@ export default {
 <style scoped>
 @import '../styles/Login.css';
 </style>
+
