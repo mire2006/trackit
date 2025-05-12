@@ -96,24 +96,25 @@ const router = createRouter({
     {
       path: '/reparaciones',
       component: LayoutVista,
-      meta: { requiresAuth: true, roles: ['administrador', 'operador'] },
       redirect: { name: 'ingresoReparaciones' },
       children: [
         {
           path: 'ingreso', 
           name: 'ingresoReparaciones',
           component: ReparacionesVista,
+          meta: { requiresAuth: true, roles: ['administrador', 'operador'] },
         },
         {
           path: 'historico',
           name: 'historicoReparaciones',
           component: HistoricoReparacionesVista,
+          meta: { requiresAuth: true, roles: ['administrador', 'operador'] },
         },
         {
           path: 'bomba/:id',
           name: 'reparacionDetalle',
           component: ReparacionDetalle,
-          meta: { requiresAuth: true, roles: ['administrador', 'operador', 'tecnico'] }
+          meta: { requiresAuth: false }
         }
       ],
     },
@@ -146,7 +147,6 @@ router.beforeEach((to, from, next) => {
       userRole = datosUsuario ? datosUsuario.Rol : null;
       isAuthenticated = !!userRole;
     } catch (e) {
-      console.error("Error al analizar datos de usuario desde localStorage:", e);
       localStorage.removeItem('usuario');
       isAuthenticated = false;
       userRole = null;
@@ -161,16 +161,11 @@ router.beforeEach((to, from, next) => {
     }
   }
   
-  console.log(`NAV GUARD: To=${to.path}, From=${from.path}, requiresAuth=${requiresAuth}, 
-   requiresGuest=${requiresGuest}, isAuthenticated=${isAuthenticated}, Role=${userRole}, AllowedRoles=${allowedRoles}`);
-
   if (requiresGuest && isAuthenticated) {
-    console.log('Guardia: Usuario autenticado intentando acceder a ruta de invitado. Redirigiendo a /dashboard.');
     return next({ name: 'dashboard' });
   }
 
   if (requiresAuth && !isAuthenticated) {
-    console.log('Guardia: Usuario no autenticado intentando acceder a ruta protegida. Redirigiendo a /login.');
     if (to.name === 'login') {
       return next();
     }
@@ -179,7 +174,6 @@ router.beforeEach((to, from, next) => {
 
   if (requiresAuth && isAuthenticated && allowedRoles) {
     if (!allowedRoles.includes(userRole)) {
-      console.log(`Guardia: Rol '${userRole}' no autorizado para ${to.path}. Redirigiendo a /dashboard.`);
       return next({ name: 'dashboard' }); 
     }
   }

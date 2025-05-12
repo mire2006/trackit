@@ -27,7 +27,7 @@ router.get('/', verificarAutenticacion, async (req, res) => {
     const reparaciones = await reparacionesModel.obtenerReparaciones();
     res.json(reparaciones);
   } catch (error) {
-     console.error("Error en GET /api/reparaciones:", error);
+    console.error("Error en GET /api/reparaciones:", error);
     res.status(500).json({ mensaje: 'Error al obtener reparaciones', error: error.message });
   }
 });
@@ -35,8 +35,8 @@ router.get('/', verificarAutenticacion, async (req, res) => {
 router.get('/:id', verificarAutenticacion, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        if (isNaN(id)) {
-           return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número.' });
+        if (isNaN(id) || id <= 0) {
+           return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número positivo.' });
         }
         const reparacion = await reparacionesModel.obtenerReparacionPorId(id);
         if (reparacion) {
@@ -64,7 +64,8 @@ router.post('/', verificarRol(['administrador', 'operador']), async (req, res) =
 
   } catch (error) {
      console.error("Error en POST /api/reparaciones:", error);
-     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') || error.message.includes('Error de referencia')) {
+     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') 
+      || error.message.includes('Error de referencia') || error.message.includes('no existe')) {
          return res.status(400).json({ mensaje: error.message });
      }
     res.status(500).json({ mensaje: 'Error al crear la reparación', error: error.message });
@@ -74,8 +75,8 @@ router.post('/', verificarRol(['administrador', 'operador']), async (req, res) =
 router.put('/:id', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
     const idReparacion = parseInt(req.params.id, 10);
-    if (isNaN(idReparacion)) {
-      return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número.' });
+    if (isNaN(idReparacion) || idReparacion <= 0) {
+      return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número positivo.' });
     }
 
     const reparacionData = { ...req.body, ID_Reparacion: idReparacion }; 
@@ -94,7 +95,7 @@ router.put('/:id', verificarRol(['administrador', 'operador']), async (req, res)
     }
   } catch (error) {
     console.error(`Error en PUT /api/reparaciones/${req.params.id}:`, error);
-     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') || error.message.includes('Error de referencia')) {
+     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') || error.message.includes('Error de referencia') || error.message.includes('no existe')) {
          return res.status(400).json({ mensaje: error.message });
      }
     res.status(500).json({ mensaje: 'Error al actualizar la reparación', error: error.message });
@@ -104,8 +105,8 @@ router.put('/:id', verificarRol(['administrador', 'operador']), async (req, res)
 router.delete('/:id', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
      const id = parseInt(req.params.id, 10);
-     if (isNaN(id)) {
-        return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número.' });
+     if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ mensaje: 'El ID de reparación debe ser un número positivo.' });
     }
     const affectedRows = await reparacionesModel.eliminarReparacion(id);
     if (affectedRows > 0) {
@@ -115,12 +116,15 @@ router.delete('/:id', verificarRol(['administrador', 'operador']), async (req, r
     }
   } catch (error) {
     console.error(`Error en DELETE /api/reparaciones/${req.params.id}:`, error);
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+        return res.status(409).json({ mensaje: 'No se puede eliminar la reparación porque tiene otros registros asociados (posiblemente en reparacion_servicio_detalle si la eliminación en cascada no está configurada o falló).' });
+    }
     res.status(500).json({ mensaje: 'Error al eliminar la reparación', error: error.message });
   }
 });
 
-router.get('/bomba/:bombaId/informe', verificarAutenticacion, async (req, res) => {
-  console.log(`Acceso a RUTA INFORME: /api/reparaciones/bomba/${req.params.bombaId}/informe`);
+router.get('/bomba/:bombaId/informe', async (req, res) => {
+  console.log(`Acceso a RUTA PÚBLICA INFORME: /api/reparaciones/bomba/${req.params.bombaId}/informe`);
   try {
     const bombaId = parseInt(req.params.bombaId, 10);
     if (isNaN(bombaId) || bombaId <= 0) {
@@ -146,7 +150,10 @@ router.get('/bomba/:bombaId/informe', verificarAutenticacion, async (req, res) =
 
   } catch (error) {
     console.error(`Error en GET /api/reparaciones/bomba/${req.params.bombaId}/informe:`, error);
-    res.status(500).json({ mensaje: 'Error al obtener datos para el informe de la bomba.', error: error.message || 'Error interno del servidor' });
+    const mensajeCliente = error.message.includes('no es una función') || error.message.includes('is not a function') 
+                           ? 'Error interno del servidor al procesar la solicitud.' 
+                           : 'Error al obtener datos para el informe de la bomba.';
+    res.status(500).json({ mensaje: mensajeCliente, detalle: (process.env.NODE_ENV === 'development' ? error.message : undefined) });
   }
 });
 
