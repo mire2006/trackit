@@ -1,6 +1,6 @@
 <template>
   <div class="gestion-container">
-    <h1>Gestión de Tipos de Bomba</h1>
+    <h1>Tipos de Bomba</h1>
     <p class="subtitulo">Administra las marcas y modelos de las bombas.</p>
 
     <div class="toolbar-container">

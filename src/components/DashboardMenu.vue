@@ -1,31 +1,42 @@
 <template>
   <nav class="dashboard-menu">
     <ul>
-      <li><router-link to="/dashboard" @click="cerrarMenusDesplegables">Perfil de Usuario</router-link></li>
+      <li><router-link to="/dashboard" @click="cerrarTodosLosMenus">Perfil de Usuario</router-link></li>
 
       <li v-if="puedeVerClientes">
-        <router-link to="/clientes" @click="cerrarMenusDesplegables">Gestión de Clientes</router-link>
+        <router-link to="/clientes" @click="cerrarTodosLosMenus">Gestión de Clientes</router-link>
       </li>
 
       <li v-if="puedeVerGestionBombas" class="dropdown-container">
-        <a @click.prevent="toggleBombasMenu" href="#" class="dropdown-toggle">
-          Gestión de Bombas <span class="dropdown-arrow" :class="{ 'open': bombasMenuAbierto }">▼</span>
+        <a @click.prevent="toggleMenu('bombas')" href="#" class="dropdown-toggle">
+          Gestión de Bombas <span class="dropdown-arrow" :class="{ 'open': menuAbierto === 'bombas' }">▼</span>
         </a>
-        <ul v-if="bombasMenuAbierto" class="dropdown-menu-items">
+        <ul v-if="menuAbierto === 'bombas'" class="dropdown-menu-items">
           <li>
-            <router-link to="/bombas" @click="cerrarMenusDesplegables">Lista de Bombas</router-link>
+            <router-link :to="{ name: 'bombas' }" @click="cerrarTodosLosMenus">Lista de Bombas</router-link>
           </li>
           <li v-if="esAdmin || esOperador">
-            <router-link to="/bombas/tipos" @click="cerrarMenusDesplegables">Gestionar Tipos de Bomba</router-link>
+            <router-link :to="{ name: 'tiposBomba' }" @click="cerrarTodosLosMenus">Gestionar Tipos de Bomba</router-link>
           </li>
         </ul>
       </li>
-      <li v-if="puedeVerReparaciones">
-        <router-link to="/reparaciones" @click="cerrarMenusDesplegables">Gestión de Reparaciones</router-link>
+
+      <li v-if="puedeVerReparaciones" class="dropdown-container">
+        <a @click.prevent="toggleMenu('reparaciones')" href="#" class="dropdown-toggle">
+          Gestión de Reparaciones <span class="dropdown-arrow" :class="{ 'open': menuAbierto === 'reparaciones' }">▼</span>
+        </a>
+        <ul v-if="menuAbierto === 'reparaciones'" class="dropdown-menu-items">
+          <li>
+            <router-link :to="{ name: 'ingresoReparaciones' }" @click="cerrarTodosLosMenus">Ingreso de Reparaciones</router-link>
+          </li>
+          <li>
+            <router-link :to="{ name: 'historicoReparaciones' }" @click="cerrarTodosLosMenus">Informe Histórico</router-link>
+          </li>
+        </ul>
       </li>
 
       <li v-if="esAdmin">
-        <router-link to="/usuarios" @click="cerrarMenusDesplegables">Gestión de Usuarios</router-link>
+        <router-link to="/usuarios" @click="cerrarTodosLosMenus">Gestión de Usuarios</router-link>
       </li>
 
       <li><button @click="logout">Cerrar Sesión</button></li>
@@ -36,12 +47,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import axios from '@/axios'; // IMPORTADO AXIOS
 
 const userRole = ref(null);
 const router = useRouter();
 const route = useRoute();
 
-const bombasMenuAbierto = ref(false);
+const menuAbierto = ref(null);
 
 const obtenerRolUsuario = () => {
   const userData = localStorage.getItem('usuario');
@@ -68,29 +80,37 @@ const puedeVerClientes = computed(() => esAdmin.value || esOperador.value);
 const puedeVerGestionBombas = computed(() => esAdmin.value || esOperador.value);
 const puedeVerReparaciones = computed(() => esAdmin.value || esOperador.value);
 
-const toggleBombasMenu = () => {
-  bombasMenuAbierto.value = !bombasMenuAbierto.value;
+const toggleMenu = (menu) => {
+  if (menuAbierto.value === menu) {
+    menuAbierto.value = null;
+  } else {
+    menuAbierto.value = menu;
+  }
 };
 
-const cerrarMenusDesplegables = () => {
-  bombasMenuAbierto.value = false;
+const cerrarTodosLosMenus = () => {
+  menuAbierto.value = null;
 };
 
 watch(() => route.path, () => {
-  cerrarMenusDesplegables();
+  cerrarTodosLosMenus();
 });
 
-const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('usuario');
-  userRole.value = null;
-  router.push('/login').then(() => {
-  });
+const logout = async () => {
+  try {
+    await axios.post('/api/usuarios/logout');
+  } catch (error) {
+    console.error("Error al cerrar sesión en el backend:", error);
+  } finally {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    userRole.value = null;
+    router.push('/login');
+  }
 };
 </script>
 
 <style scoped>
-
 .dashboard-menu {
   background-color: #f4f4f4;
   padding: 10px 0;
@@ -126,7 +146,8 @@ const logout = () => {
 
 .dashboard-menu a:hover,
 .dashboard-menu .dropdown-toggle:hover,
-.dashboard-menu a.router-link-exact-active {
+.dashboard-menu a.router-link-exact-active,
+.dashboard-menu .dropdown-menu-items a.router-link-active.router-link-exact-active {
   font-weight: bold;
   color: #000;
   background-color: #e0e0e0;
@@ -183,7 +204,7 @@ const logout = () => {
 }
 
 .dropdown-menu-items li {
-    width: 100%;
+    width: 100%; 
     margin: 0;
 }
 

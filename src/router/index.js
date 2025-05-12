@@ -7,8 +7,9 @@ import ClientesVista from '../views/ClientesVista.vue';
 import BombasVista from '../views/BombasVista.vue';
 import TiposBombaVista from '../views/TiposBombaVista.vue';
 import ReparacionesVista from '../views/ReparacionesVista.vue';
-import UsuariosVista from '../views/UsuariosVista.vue';
+import HistoricoReparacionesVista from '../views/HistoricoReparacionesVista.vue';
 import ReparacionDetalle from '../views/ReparacionDetalle.vue';
+import UsuariosVista from '../views/UsuariosVista.vue';
 import RecuperacionContrasenaVista from '../views/RecuperacionContrasenaVista.vue';
 
 const router = createRouter({
@@ -96,24 +97,24 @@ const router = createRouter({
       path: '/reparaciones',
       component: LayoutVista,
       meta: { requiresAuth: true, roles: ['administrador', 'operador'] },
+      redirect: { name: 'ingresoReparaciones' },
       children: [
         {
-          path: '',
-          name: 'reparaciones',
+          path: 'ingreso', 
+          name: 'ingresoReparaciones',
           component: ReparacionesVista,
         },
-      ],
-    },
-    {
-      path: '/reparaciones/bomba/:id',
-      component: LayoutVista,
-      meta: { requiresAuth: true, roles: ['administrador', 'operador', 'tecnico'] },
-      children: [
         {
-          path: '',
+          path: 'historico',
+          name: 'historicoReparaciones',
+          component: HistoricoReparacionesVista,
+        },
+        {
+          path: 'bomba/:id',
           name: 'reparacionDetalle',
           component: ReparacionDetalle,
-        },
+          meta: { requiresAuth: true, roles: ['administrador', 'operador', 'tecnico'] }
+        }
       ],
     },
     {
@@ -156,12 +157,12 @@ router.beforeEach((to, from, next) => {
   for (let i = to.matched.length - 1; i >= 0; i--) {
     if (to.matched[i].meta.roles) {
       allowedRoles = to.matched[i].meta.roles;
-      break;
+      break; 
     }
   }
   
   console.log(`NAV GUARD: To=${to.path}, From=${from.path}, requiresAuth=${requiresAuth}, 
-    requiresGuest=${requiresGuest}, isAuthenticated=${isAuthenticated}, Role=${userRole}, AllowedRoles=${allowedRoles}`);
+   requiresGuest=${requiresGuest}, isAuthenticated=${isAuthenticated}, Role=${userRole}, AllowedRoles=${allowedRoles}`);
 
   if (requiresGuest && isAuthenticated) {
     console.log('Guardia: Usuario autenticado intentando acceder a ruta de invitado. Redirigiendo a /dashboard.');
