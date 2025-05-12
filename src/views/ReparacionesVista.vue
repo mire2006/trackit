@@ -29,11 +29,32 @@
 
     <TablaReparaciones
       v-if="!cargandoGlobal && !errorApi"
-      :reparaciones="filteredReparaciones"
+      :reparaciones="reparacionesPaginadas"
       @editar="abrirModalEditarReparacion"
       @eliminar="confirmarEliminacionReparacion"
       @generar-informe="abrirModalInforme"
     />
+
+    <div v-if="!cargandoGlobal && !errorApi && totalPaginas > 0" class="controles-paginacion">
+      <button @click="cambiarPagina(1)" :disabled="paginaActual === 1" class="btn-paginacion btn-extremo">
+        « Primera
+      </button>
+      <button @click="cambiarPagina(paginaActual - 1)" :disabled="paginaActual === 1" class="btn-paginacion">
+        ‹ Anterior
+      </button>
+      
+      <span class="info-pagina">
+        Página {{ paginaActual }} de {{ totalPaginas }} (Total: {{ filteredReparaciones.length }} reparaciones)
+      </span>
+      
+      <button @click="cambiarPagina(paginaActual + 1)" :disabled="paginaActual === totalPaginas" class="btn-paginacion">
+        Siguiente ›
+      </button>
+      <button @click="cambiarPagina(totalPaginas)" :disabled="paginaActual === totalPaginas" class="btn-paginacion btn-extremo">
+        Última »
+      </button>
+    </div>
+    
     <div v-if="!cargandoGlobal && !errorApi && filteredReparaciones.length === 0 && listaReparaciones.length > 0 && searchTermReparacion" class="no-datos">
       <p>No se encontraron reparaciones que coincidan con "{{ searchTermReparacion }}".</p>
     </div>
@@ -77,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/axios';
 import TablaReparaciones from '@/components/TablaReparaciones.vue';
 import FormularioReparacion from '@/components/FormularioReparacion.vue';
@@ -104,6 +125,8 @@ const searchTermReparacion = ref('');
 const mostrarModalInforme = ref(false);
 const bombaIdParaInformeSeleccionada = ref(null);
 
+const paginaActual = ref(1);
+const itemsPorPagina = ref(10);
 
 const formatearFechaParaBusqueda = (fechaISO) => {
   if (!fechaISO) return '';
@@ -135,6 +158,28 @@ const filteredReparaciones = computed(() => {
   });
 });
 
+const reparacionesPaginadas = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina.value;
+  const fin = inicio + itemsPorPagina.value;
+  return filteredReparaciones.value.slice(inicio, fin);
+});
+
+const totalPaginas = computed(() => {
+  if (!filteredReparaciones.value) return 0;
+  return Math.ceil(filteredReparaciones.value.length / itemsPorPagina.value);
+});
+
+const cambiarPagina = (nuevaPagina) => {
+  if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas.value) {
+    paginaActual.value = nuevaPagina;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+watch(searchTermReparacion, () => {
+  paginaActual.value = 1;
+});
+
 const mostrarMensajeExitoTemporal = (mensaje) => {
   mensajeExitoGlobalTexto.value = mensaje;
   mostrarMensajeExitoGlobal.value = true;
@@ -147,6 +192,7 @@ const mostrarMensajeExitoTemporal = (mensaje) => {
 const obtenerReparacionesAPI = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
+  paginaActual.value = 1; 
   try {
     const { data } = await axios.get('/api/reparaciones');
     listaReparaciones.value = data;
@@ -463,6 +509,52 @@ const cerrarModalInforme = () => {
 }
 .tabla-trackit .btn-informe:hover {
   background-color: #138496;
+}
+
+.controles-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-paginacion {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.btn-paginacion:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-paginacion:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-extremo {
+    background-color: #545b62;
+}
+.btn-extremo:hover:not(:disabled) {
+    background-color: #42474c;
+}
+
+
+.info-pagina {
+  font-size: 0.95em;
+  color: #495057;
+  margin: 0 10px;
 }
 
 </style>

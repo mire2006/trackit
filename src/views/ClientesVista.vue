@@ -31,13 +31,38 @@
 
     <TablaClientes
       v-if="!cargandoGlobal && !errorApi"
-      :clientes="filteredClientes"
+      :clientes="clientesPaginados"
       @editar="abrirModalEditar"
       @eliminar="confirmarEliminacion"
     />
-    <div v-if="!cargandoGlobal && !errorApi && filteredClientes.length === 0 && searchTerm" class="no-datos">
+
+    <div v-if="!cargandoGlobal && !errorApi && totalPaginas > 0" class="controles-paginacion">
+      <button @click="cambiarPagina(1)" :disabled="paginaActual === 1" class="btn-paginacion btn-extremo">
+        « Primera
+      </button>
+      <button @click="cambiarPagina(paginaActual - 1)" :disabled="paginaActual === 1" class="btn-paginacion">
+        ‹ Anterior
+      </button>
+      
+      <span class="info-pagina">
+        Página {{ paginaActual }} de {{ totalPaginas }} (Total: {{ filteredClientes.length }} clientes)
+      </span>
+      
+      <button @click="cambiarPagina(paginaActual + 1)" :disabled="paginaActual === totalPaginas" class="btn-paginacion">
+        Siguiente ›
+      </button>
+      <button @click="cambiarPagina(totalPaginas)" :disabled="paginaActual === totalPaginas" class="btn-paginacion btn-extremo">
+        Última »
+      </button>
+    </div>
+
+    <div v-if="!cargandoGlobal && !errorApi && filteredClientes.length === 0 && listaClientes.length > 0 && searchTerm" class="no-datos">
       <p>No se encontraron clientes que coincidan con "{{ searchTerm }}".</p>
     </div>
+    <div v-if="!cargandoGlobal && !errorApi && listaClientes.length === 0 && !searchTerm" class="no-datos">
+        <p>No hay clientes registrados todavía. ¡Crea el primero!</p>
+    </div>
+
 
     <div v-if="mostrarModal" class="modal-overlay">
       <div class="modal-content">
@@ -65,14 +90,14 @@
                 </button>
                 <button @click="cancelarEliminacion" class="btn-cancelar" :disabled="cargandoEliminacion">Cancelar</button>
             </div>
-             <div v-if="errorEliminacion" class="error-message-form">{{ errorEliminacion }}</div>
+            <div v-if="errorEliminacion" class="error-message-form">{{ errorEliminacion }}</div>
         </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, watch } from 'vue';
 import axios from '@/axios';
 import TablaClientes from '@/components/TablaClientes.vue';
 import FormularioCliente from '@/components/FormularioCliente.vue';
@@ -83,6 +108,28 @@ const cargandoGlobal = ref(false);
 const errorApi = ref(null);
 
 const searchTerm = ref('');
+
+const errorFormulario = ref(null);
+const errorEliminacion = ref(null);
+const mostrarModal = ref(false);
+const esEdicion = ref(false);
+const clienteActual = reactive({
+  ID_Cliente: null, RUT: '', Nombre_Cliente: '', Calle: '', Numero: '', Comuna: '',
+  Nombre_Contacto: '', Apellido_Paterno_Contacto: '', Apellido_Materno_Contacto: '',
+  Telefono_Contacto: '', Email_Contacto: ''
+});
+const cargandoFormulario = ref(false);
+
+const mostrarModalConfirmacion = ref(false);
+const clienteAEliminar = ref(null);
+const cargandoEliminacion = ref(false);
+
+const mostrarMensajeExitoGlobal = ref(false);
+const mensajeExitoGlobalTexto = ref('');
+
+const paginaActual = ref(1);
+const itemsPorPagina = ref(10);
+
 
 const filteredClientes = computed(() => {
   if (!searchTerm.value) {
@@ -103,23 +150,27 @@ const filteredClientes = computed(() => {
   });
 });
 
-const errorFormulario = ref(null);
-const errorEliminacion = ref(null);
-const mostrarModal = ref(false);
-const esEdicion = ref(false);
-const clienteActual = reactive({
-  ID_Cliente: null, RUT: '', Nombre_Cliente: '', Calle: '', Numero: '', Comuna: '',
-  Nombre_Contacto: '', Apellido_Paterno_Contacto: '', Apellido_Materno_Contacto: '',
-  Telefono_Contacto: '', Email_Contacto: ''
+const clientesPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina.value;
+  const fin = inicio + itemsPorPagina.value;
+  return filteredClientes.value.slice(inicio, fin);
 });
-const cargandoFormulario = ref(false);
 
-const mostrarModalConfirmacion = ref(false);
-const clienteAEliminar = ref(null);
-const cargandoEliminacion = ref(false);
+const totalPaginas = computed(() => {
+  if (!filteredClientes.value) return 0;
+  return Math.ceil(filteredClientes.value.length / itemsPorPagina.value);
+});
 
-const mostrarMensajeExitoGlobal = ref(false);
-const mensajeExitoGlobalTexto = ref('');
+const cambiarPagina = (nuevaPagina) => {
+  if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas.value) {
+    paginaActual.value = nuevaPagina;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+watch(searchTerm, () => {
+  paginaActual.value = 1;
+});
 
 const mostrarMensajeExitoTemporal = (mensaje) => {
   mensajeExitoGlobalTexto.value = mensaje;
@@ -133,6 +184,7 @@ const mostrarMensajeExitoTemporal = (mensaje) => {
 const obtenerClientes = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
+  paginaActual.value = 1;
   try {
     const { data } = await axios.get('/api/clientes');
     listaClientes.value = data;
@@ -167,10 +219,10 @@ const abrirModalEditar = (cliente) => {
     if (cliente[key] !== undefined) {
       clienteActual[key] = cliente[key];
     } else {
-      clienteActual[key] = '';
+      clienteActual[key] = ''; 
     }
   });
-  clienteActual.ID_Cliente = cliente.ID_Cliente;
+  clienteActual.ID_Cliente = cliente.ID_Cliente; 
   errorFormulario.value = null;
   mostrarModal.value = true;
 };
@@ -227,7 +279,7 @@ const ejecutarEliminacion = async () => {
     await axios.delete(`/api/clientes/${clienteAEliminar.value.ID_Cliente}`);
     cancelarEliminacion();
     mostrarMensajeExitoTemporal('¡Cliente eliminado correctamente!');
-    await obtenerClientes();
+    await obtenerClientes(); 
   } catch (error) {
     console.error("Error al eliminar cliente:", error);
     errorEliminacion.value = error.response?.data?.mensaje || 'Error al eliminar el cliente.';
@@ -464,4 +516,51 @@ const ejecutarEliminacion = async () => {
   font-size: 1.3em;
   font-weight: bold;
 }
+
+.controles-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-paginacion {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.btn-paginacion:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-paginacion:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-extremo {
+    background-color: #545b62;
+}
+.btn-extremo:hover:not(:disabled) {
+    background-color: #42474c;
+}
+
+
+.info-pagina {
+  font-size: 0.95em;
+  color: #495057;
+  margin: 0 10px;
+}
+
 </style>

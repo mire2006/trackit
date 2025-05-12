@@ -30,13 +30,36 @@
 
     <TablaBombas
       v-if="!cargandoGlobal && !errorApi && !cargandoDependencias && !errorDependencias"
-      :bombas="filteredBombas"
+      :bombas="bombasPaginadas"
       @editar="abrirModalEditarBomba"
       @eliminar="confirmarEliminacionBomba"
     />
-     <div v-if="!cargandoGlobal && !errorApi && !cargandoDependencias && !errorDependencias && filteredBombas.length === 0 && searchTermBomba" class="no-datos">
+
+    <div v-if="!cargandoGlobal && !errorApi && !cargandoDependencias && !errorDependencias && totalPaginas > 0" class="controles-paginacion">
+      <button @click="cambiarPagina(1)" :disabled="paginaActual === 1" class="btn-paginacion btn-extremo">
+        « Primera
+      </button>
+      <button @click="cambiarPagina(paginaActual - 1)" :disabled="paginaActual === 1" class="btn-paginacion">
+        ‹ Anterior
+      </button>
+      <span class="info-pagina">
+        Página {{ paginaActual }} de {{ totalPaginas }} (Total: {{ filteredBombas.length }} bombas)
+      </span>
+      <button @click="cambiarPagina(paginaActual + 1)" :disabled="paginaActual === totalPaginas" class="btn-paginacion">
+        Siguiente ›
+      </button>
+      <button @click="cambiarPagina(totalPaginas)" :disabled="paginaActual === totalPaginas" class="btn-paginacion btn-extremo">
+        Última »
+      </button>
+    </div>
+
+    <div v-if="!cargandoGlobal && !errorApi && !cargandoDependencias && !errorDependencias && filteredBombas.length === 0 && listaBombas.length > 0 && searchTermBomba" class="no-datos">
       <p>No se encontraron bombas que coincidan con "{{ searchTermBomba }}".</p>
     </div>
+     <div v-if="!cargandoGlobal && !errorApi && !cargandoDependencias && !errorDependencias && listaBombas.length === 0 && !searchTermBomba" class="no-datos">
+        <p>No hay bombas registradas todavía. ¡Crea la primera!</p>
+    </div>
+
 
     <div v-if="mostrarModalBomba" class="modal-overlay">
       <div class="modal-content modal-bomba">
@@ -48,7 +71,7 @@
           :error-formulario-prop="errorFormularioBomba"
           :lista-clientes="listaClientesParaForm"
           :lista-tipos-bomba="listaTiposBombaParaForm"
-          :puede-crear-tipos="puedeGestionarTipos"  
+          :puede-crear-tipos="puedeGestionarTipos" 
           @guardar="procesarGuardadoBomba"
           @cancelar="cerrarModalBomba"
           @solicitar-crear-tipo-bomba="abrirModalCrearTipoBombaRapido"
@@ -74,7 +97,7 @@
         <div class="modal-content confirmacion-dialog">
             <h3>Confirmar Eliminación</h3>
             <p>¿Estás seguro de que deseas eliminar la bomba ID: <strong>{{ bombaAEliminar?.ID_Bomba }}</strong>
-               (Circuito: {{ bombaAEliminar?.Circuito }}, Modelo: {{bombaAEliminar?.Marca}} - {{ bombaAEliminar?.Modelo }})?
+                (Circuito: {{ bombaAEliminar?.Circuito }}, Modelo: {{bombaAEliminar?.Marca}} - {{ bombaAEliminar?.Modelo }})?
             </p>
             <p class="advertencia-eliminacion">Esta acción no se puede deshacer y también eliminará 
               el código QR asociado. Si la bomba tiene reparaciones, no se podrá eliminar.</p>
@@ -85,14 +108,14 @@
                 </button>
                 <button @click="cancelarEliminacionBomba" class="btn-cancelar" :disabled="cargandoEliminacionBomba">Cancelar</button>
             </div>
-             <div v-if="errorEliminacionBomba" class="error-message-form">{{ errorEliminacionBomba }}</div>
+            <div v-if="errorEliminacionBomba" class="error-message-form">{{ errorEliminacionBomba }}</div>
         </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, watch } from 'vue';
 import axios from '@/axios';
 import TablaBombas from '@/components/TablaBombas.vue';
 import FormularioBomba from '@/components/FormularioBomba.vue';
@@ -110,7 +133,7 @@ const bombaAEliminar = ref(null);
 const cargandoEliminacionBomba = ref(false);
 const errorEliminacionBomba = ref(null);
 
-const tipoBombaRapidoActual = reactive({ ID_Tipo_Bomba: null, Marca: '', Modelo: '', Descripcion_Tecnica: '' });
+const tipoBombaRapidoActual = reactive({ ID_Tipo_Bomba: null, Marca: '', Modelo: '', Descripcion_Tecnica: ''});
 const mostrarModalTipoBombaRapido = ref(false);
 const cargandoFormularioTipoBombaRapido = ref(false);
 const errorFormularioTipoBombaRapido = ref(null);
@@ -131,6 +154,9 @@ const puedeGestionarTipos = computed(() => esAdmin.value || esOperador.value);
 
 const searchTermBomba = ref('');
 
+const paginaActual = ref(1);
+const itemsPorPagina = ref(10);
+
 const filteredBombas = computed(() => {
   if (!searchTermBomba.value) {
     return listaBombas.value;
@@ -145,6 +171,28 @@ const filteredBombas = computed(() => {
       (bomba.Circuito && bomba.Circuito.toLowerCase().includes(lowerSearchTerm))
     );
   });
+});
+
+const bombasPaginadas = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina.value;
+  const fin = inicio + itemsPorPagina.value;
+  return filteredBombas.value.slice(inicio, fin);
+});
+
+const totalPaginas = computed(() => {
+  if(!filteredBombas.value) return 0;
+  return Math.ceil(filteredBombas.value.length / itemsPorPagina.value);
+});
+
+const cambiarPagina = (nuevaPagina) => {
+  if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas.value) {
+    paginaActual.value = nuevaPagina;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+watch(searchTermBomba, () => {
+  paginaActual.value = 1;
 });
 
 const obtenerRolUsuarioActual = () => {
@@ -171,10 +219,12 @@ const mostrarMensajeExitoTemporal = (mensaje) => {
 const obtenerBombasAPI = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
+  paginaActual.value = 1;
   try {
     const { data } = await axios.get('/api/bombas');
     listaBombas.value = data;
   } catch (error) {
+    console.error("Error al cargar bombas:", error);
     errorApi.value = error.response?.data?.mensaje || 'Error al cargar la lista de bombas.';
   } finally {
     cargandoGlobal.value = false;
@@ -192,6 +242,7 @@ const cargarDependenciasFormularioAPI = async () => {
     listaClientesParaForm.value = clientesRes.data;
     listaTiposBombaParaForm.value = tiposBombaRes.data;
   } catch (error) {
+    console.error("Error cargando dependencias para formulario de bombas:", error);
     errorDependencias.value = 'No se pudieron cargar los clientes o tipos de bomba para el formulario.';
   } finally {
     cargandoDependencias.value = false;
@@ -251,6 +302,7 @@ const procesarGuardadoBomba = async (datosBombaDesdeFormulario) => {
     mostrarMensajeExitoTemporal(mensajeConfirmacion);
     await obtenerBombasAPI();
   } catch (error) {
+    console.error("Error al guardar bomba:", error);
     errorFormularioBomba.value = error.response?.data?.mensaje || (esEdicionBomba.value ? 'Error al actualizar la bomba.' : 'Error al crear la bomba.');
   } finally {
     cargandoFormularioBomba.value = false;
@@ -280,6 +332,7 @@ const ejecutarEliminacionBomba = async () => {
     mostrarMensajeExitoTemporal('¡Bomba eliminada correctamente!');
     await obtenerBombasAPI();
   } catch (error) {
+    console.error("Error al eliminar bomba:", error);
     errorEliminacionBomba.value = error.response?.data?.mensaje || 'Error al eliminar la bomba.';
   } finally {
     cargandoEliminacionBomba.value = false;
@@ -314,6 +367,7 @@ const procesarGuardadoTipoBombaRapido = async (datosTipoBomba) => {
     cerrarModalTipoBombaRapido();
     mostrarMensajeExitoTemporal('¡Nuevo tipo de bomba creado exitosamente!');
   } catch (error) {
+    console.error("Error al crear tipo de bomba rápido:", error);
     errorFormularioTipoBombaRapido.value = error.response?.data?.mensaje || 'Error al crear el tipo de bomba.';
   } finally {
     cargandoFormularioTipoBombaRapido.value = false;
@@ -558,4 +612,51 @@ const procesarGuardadoTipoBombaRapido = async (datosTipoBomba) => {
   font-size: 1.3em;
   font-weight: bold;
 }
+
+.controles-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-paginacion {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.btn-paginacion:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-paginacion:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-extremo {
+    background-color: #545b62;
+}
+.btn-extremo:hover:not(:disabled) {
+    background-color: #42474c;
+}
+
+
+.info-pagina {
+  font-size: 0.95em;
+  color: #495057;
+  margin: 0 10px;
+}
+
 </style>

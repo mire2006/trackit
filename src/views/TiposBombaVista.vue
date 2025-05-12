@@ -31,12 +31,34 @@
 
     <TablaTiposBomba
       v-if="!cargandoGlobal && !errorApi"
-      :tipos-bomba="filteredTiposBomba"
+      :tipos-bomba="tiposBombaPaginados"
       @editar="abrirModalEditar"
       @eliminar="confirmarEliminacion"
     />
-    <div v-if="!cargandoGlobal && !errorApi && filteredTiposBomba.length === 0 && searchTermTipoBomba" class="no-datos">
+
+    <div v-if="!cargandoGlobal && !errorApi && totalPaginas > 0" class="controles-paginacion">
+      <button @click="cambiarPagina(1)" :disabled="paginaActual === 1" class="btn-paginacion btn-extremo">
+        « Primera
+      </button>
+      <button @click="cambiarPagina(paginaActual - 1)" :disabled="paginaActual === 1" class="btn-paginacion">
+        ‹ Anterior
+      </button>
+      <span class="info-pagina">
+        Página {{ paginaActual }} de {{ totalPaginas }} (Total: {{ filteredTiposBomba.length }} tipos)
+      </span>
+      <button @click="cambiarPagina(paginaActual + 1)" :disabled="paginaActual === totalPaginas" class="btn-paginacion">
+        Siguiente ›
+      </button>
+      <button @click="cambiarPagina(totalPaginas)" :disabled="paginaActual === totalPaginas" class="btn-paginacion btn-extremo">
+        Última »
+      </button>
+    </div>
+
+    <div v-if="!cargandoGlobal && !errorApi && filteredTiposBomba.length === 0 && listaTiposBomba.length > 0 && searchTermTipoBomba" class="no-datos">
       <p>No se encontraron tipos de bomba que coincidan con "{{ searchTermTipoBomba }}".</p>
+    </div>
+     <div v-if="!cargandoGlobal && !errorApi && listaTiposBomba.length === 0 && !searchTermTipoBomba" class="no-datos">
+        <p>No hay tipos de bomba registrados todavía. ¡Crea el primero!</p>
     </div>
 
     <div v-if="mostrarModal" class="modal-overlay">
@@ -57,9 +79,9 @@
         <div class="modal-content confirmacion-dialog">
             <h3>Confirmar Eliminación</h3>
             <p>¿Estás seguro de que deseas eliminar el tipo de bomba <strong>{{ tipoBombaAEliminar?.Marca }} - 
-                 {{ tipoBombaAEliminar?.Modelo }}</strong> (ID: {{ tipoBombaAEliminar?.ID_Tipo_Bomba }})?</p>
+                  {{ tipoBombaAEliminar?.Modelo }}</strong> (ID: {{ tipoBombaAEliminar?.ID_Tipo_Bomba }})?</p>
             <p class="advertencia-eliminacion">Esta acción no se puede deshacer. Si este tipo de bomba está siendo 
-                 utilizado por alguna bomba registrada, no se podrá eliminar.</p>
+                  utilizado por alguna bomba registrada, no se podrá eliminar.</p>
             <div class="modal-actions">
                 <button @click="ejecutarEliminacion" class="btn-eliminar-confirm" :disabled="cargandoEliminacion">
                   <span v-if="cargandoEliminacion" class="spinner-btn"></span>
@@ -67,7 +89,7 @@
                 </button>
                 <button @click="cancelarEliminacion" class="btn-cancelar" :disabled="cargandoEliminacion">Cancelar</button>
             </div>
-             <div v-if="errorEliminacion" class="error-message-form">{{ errorEliminacion }}</div>
+            <div v-if="errorEliminacion" class="error-message-form">{{ errorEliminacion }}</div>
         </div>
     </div>
 
@@ -75,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, watch } from 'vue';
 import axios from '@/axios';
 import TablaTiposBomba from '@/components/TablaTiposBomba.vue';
 import FormularioTipoBomba from '@/components/FormularioTipoBomba.vue';
@@ -107,6 +129,9 @@ const mensajeExitoGlobalTexto = ref('');
 
 const searchTermTipoBomba = ref('');
 
+const paginaActual = ref(1);
+const itemsPorPagina = ref(10);
+
 const filteredTiposBomba = computed(() => {
   if (!searchTermTipoBomba.value) {
     return listaTiposBomba.value;
@@ -121,6 +146,28 @@ const filteredTiposBomba = computed(() => {
   });
 });
 
+const tiposBombaPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina.value;
+  const fin = inicio + itemsPorPagina.value;
+  return filteredTiposBomba.value.slice(inicio, fin);
+});
+
+const totalPaginas = computed(() => {
+  if(!filteredTiposBomba.value) return 0;
+  return Math.ceil(filteredTiposBomba.value.length / itemsPorPagina.value);
+});
+
+const cambiarPagina = (nuevaPagina) => {
+  if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas.value) {
+    paginaActual.value = nuevaPagina;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+watch(searchTermTipoBomba, () => {
+  paginaActual.value = 1;
+});
+
 const mostrarMensajeExitoTemporal = (mensaje) => {
   mensajeExitoGlobalTexto.value = mensaje;
   mostrarMensajeExitoGlobal.value = true;
@@ -133,10 +180,12 @@ const mostrarMensajeExitoTemporal = (mensaje) => {
 const obtenerTiposBombaAPI = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
+  paginaActual.value = 1;
   try {
     const { data } = await axios.get('/api/tipos_bomba');
     listaTiposBomba.value = data;
   } catch (error) {
+    console.error("Error al cargar tipos de bomba:", error);
     errorApi.value = error.response?.data?.mensaje || 'Error al cargar la lista de tipos de bomba.';
   } finally {
     cargandoGlobal.value = false;
@@ -190,6 +239,7 @@ const procesarGuardadoTipoBomba = async (datosDesdeFormulario) => {
     await obtenerTiposBombaAPI();
 
   } catch (error) {
+    console.error("Error al guardar tipo de bomba:", error);
     errorFormulario.value = error.response?.data?.mensaje || (esEdicion.value ? 'Error al actualizar.' : 'Error al crear.');
   } finally {
     cargandoFormulario.value = false;
@@ -221,6 +271,7 @@ const ejecutarEliminacion = async () => {
     mostrarMensajeExitoTemporal('¡Tipo de bomba eliminado correctamente!');
     await obtenerTiposBombaAPI();
   } catch (error) {
+    console.error("Error al eliminar tipo de bomba:", error);
     errorEliminacion.value = error.response?.data?.mensaje || 'Error al eliminar. Verifique si está en uso.';
   } finally {
     cargandoEliminacion.value = false;
@@ -456,4 +507,51 @@ const ejecutarEliminacion = async () => {
   font-size: 1.3em;
   font-weight: bold;
 }
+
+.controles-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-paginacion {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.btn-paginacion:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-paginacion:disabled {
+  background-color: #adb5bd;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-extremo {
+    background-color: #545b62;
+}
+.btn-extremo:hover:not(:disabled) {
+    background-color: #42474c;
+}
+
+
+.info-pagina {
+  font-size: 0.95em;
+  color: #495057;
+  margin: 0 10px;
+}
+
 </style>
