@@ -1,27 +1,27 @@
 <template>
-  <div class="tabla-usuarios-container">
-    <div v-if="!usuarios || usuarios.length === 0" class="no-usuarios">
-      <p>No hay usuarios para mostrar.</p>
+  <div class="tabla-tipos-bomba-container">
+    <div v-if="!tiposBomba || tiposBomba.length === 0" class="no-datos">
+      <p>No hay tipos de bomba para mostrar.</p>
     </div>
-    <table v-else class="tabla-usuarios">
+    <table v-else class="tabla-trackit">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Nombre Completo</th>
-          <th>Email</th>
-          <th>Rol</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Descripción Técnica</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="usuario in usuarios" :key="usuario.ID_Usuario">
-          <td>{{ usuario.ID_Usuario }}</td>
-          <td>{{ usuario.Nombre }} {{ usuario.Apellido_Paterno }} {{ usuario.Apellido_Materno || '' }}</td>
-          <td>{{ usuario.Email }}</td>
-          <td>{{ usuario.Rol }}</td>
+        <tr v-for="tipo in tiposBomba" :key="tipo.ID_Tipo_Bomba">
+          <td>{{ tipo.ID_Tipo_Bomba }}</td>
+          <td>{{ tipo.Marca }}</td>
+          <td>{{ tipo.Modelo }}</td>
+          <td>{{ tipo.Descripcion_Tecnica || '-' }}</td>
           <td>
-            <button @click="$emit('editar', usuario)" class="btn-editar">Editar</button>
-            <button @click="$emit('eliminar', usuario.ID_Usuario)" class="btn-eliminar">Eliminar</button>
+            <button @click="$emit('editar', tipo)" class="btn-editar">Editar</button>
+            <button @click="$emit('eliminar', tipo.ID_Tipo_Bomba)" class="btn-eliminar">Eliminar</button>
           </td>
         </tr>
       </tbody>
@@ -32,7 +32,7 @@
 <script setup>
 
 const props = defineProps({
-  usuarios: {
+  tiposBomba: {
     type: Array,
     required: true,
     default: () => []
@@ -43,37 +43,39 @@ const emit = defineEmits(['editar', 'eliminar']);
 </script>
 
 <style scoped>
-.tabla-usuarios-container {
+.tabla-tipos-bomba-container {
   margin-top: 20px;
   overflow-x: auto;
 }
 
-.tabla-usuarios {
+.tabla-trackit {
   width: 100%;
   border-collapse: collapse;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background-color: #fff;
+  font-size: 0.9em;
 }
 
-.tabla-usuarios th,
-.tabla-usuarios td {
+.tabla-trackit th,
+.tabla-trackit td {
   border: 1px solid #ddd;
-  padding: 10px 12px;
+  padding: 8px 10px;
   text-align: left;
   vertical-align: middle;
 }
 
-.tabla-usuarios th {
+.tabla-trackit th {
   background-color: #4e4b4c;
   color: white;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.tabla-usuarios tr:nth-child(even) {
+.tabla-trackit tr:nth-child(even) {
   background-color: #f9f9f9;
 }
 
-.tabla-usuarios tr:hover {
+.tabla-trackit tr:hover {
   background-color: #f1f1f1;
 }
 
@@ -86,27 +88,22 @@ const emit = defineEmits(['editar', 'eliminar']);
   font-size: 0.9em;
   margin-right: 5px;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-editar {
   background-color: #ffc107;
   color: #212529;
 }
-
-.btn-editar:hover {
-  background-color: #e0a800;
-}
+.btn-editar:hover { background-color: #e0a800; }
 
 .btn-eliminar {
   background-color: #dc3545;
   color: white;
 }
+.btn-eliminar:hover { background-color: #c82333; }
 
-.btn-eliminar:hover {
-  background-color: #c82333;
-}
-
-.no-usuarios {
+.no-datos {
   text-align: center;
   padding: 20px;
   color: #777;

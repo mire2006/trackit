@@ -3,82 +3,98 @@ const pool = require('../db');
 function procesarReparacionesConServicios(rows) {
     return rows.map(row => {
         let servicios = [];
-        try {
-            if (row.ServiciosJSON && row.ServiciosJSON !== '') {
-                 servicios = JSON.parse(row.ServiciosJSON);
-                 if (servicios === null) servicios = []; 
-            }
-        } catch (e) {
-            console.error(`Error parseando ServiciosJSON para reparacion ID ${row.ID_Reparacion}:`, e, row.ServiciosJSON);
-            servicios = [];
+        if (Array.isArray(row.ServiciosJSON) && row.ServiciosJSON.length > 0) {
+            servicios = row.ServiciosJSON.filter(s => s && s.ID_Tipo_Servicio && s.Nombre);
         }
         
-        const { ServiciosJSON, ...reparacionData } = row;
+        const reparacionData = { ...row };
+        delete reparacionData.ServiciosJSON;
+
         return {
             ...reparacionData,
-            Servicios: servicios
+            Servicios: servicios 
         };
     });
 }
-
 
 async function obtenerReparaciones() {
   try {
     const query = `
       SELECT 
         r.ID_Reparacion, r.ID_Bomba, r.Fecha, r.Detalles, r.ID_Usuario,
-        (SELECT u.Email FROM usuarios u WHERE u.ID_Usuario = r.ID_Usuario) as UsuarioEmail, -- Opcional: obtener email del usuario
-        (SELECT b.Modelo FROM bombas b WHERE b.ID_Bomba = r.ID_Bomba) as BombaModelo,     -- Opcional: obtener modelo de bomba
-        JSON_ARRAYAGG(
-          IF(ts.ID_Tipo_Servicio IS NULL, NULL, -- Evita objeto JSON vacío si no hay match
-            JSON_OBJECT('ID_Tipo_Servicio', ts.ID_Tipo_Servicio, 'Nombre', ts.Nombre)
-          )
-        ) as ServiciosJSON 
+        u.Email AS UsuarioEmail,
+        tb.Marca AS BombaMarca,
+        tb.Modelo AS BombaModelo,
+        c.Nombre_Cliente AS NombreClienteBomba, 
+        c.RUT AS RUTClienteBomba,
+        COALESCE(
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT('ID_Tipo_Servicio', ts_inner.ID_Tipo_Servicio, 'Nombre', ts_inner.Nombre)
+            )
+            FROM reparacion_servicio_detalle rsd_inner
+            JOIN tipos_servicio ts_inner ON rsd_inner.FK_ID_Tipo_Servicio = ts_inner.ID_Tipo_Servicio
+            WHERE rsd_inner.FK_ID_Reparacion = r.ID_Reparacion
+          ),
+          JSON_ARRAY() 
+        ) AS ServiciosJSON
       FROM 
         Reparaciones r
       LEFT JOIN 
-        reparacion_servicio_detalle rsd ON r.ID_Reparacion = rsd.FK_ID_Reparacion
+        Usuarios u ON r.ID_Usuario = u.ID_Usuario
+      LEFT JOIN
+        Bombas b ON r.ID_Bomba = b.ID_Bomba
       LEFT JOIN 
-        tipos_servicio ts ON rsd.FK_ID_Tipo_Servicio = ts.ID_Tipo_Servicio
-      GROUP BY 
-        r.ID_Reparacion
+        Tipos_Bomba tb ON b.FK_ID_Tipo_Bomba = tb.ID_Tipo_Bomba
+      LEFT JOIN
+        Clientes c ON b.ID_Cliente = c.ID_Cliente  
       ORDER BY
-        r.Fecha DESC; 
+        r.Fecha DESC, r.ID_Reparacion DESC;
     `;
     const [rows] = await pool.query(query);
     return procesarReparacionesConServicios(rows);
   } catch (error) {
-    console.error('Error al obtener reparaciones:', error);
+    console.error('Error SQL en obtenerReparaciones:', error);
     throw error;
   }
 }
 
 async function obtenerReparacionPorId(id) {
-  if (isNaN(id)) {
-    throw new Error('ID de reparación debe ser un número.');
+  if (isNaN(id) || Number(id) <= 0) {
+    throw new Error('ID de reparación debe ser un número positivo.');
   }
-
   try {
      const query = `
       SELECT 
         r.ID_Reparacion, r.ID_Bomba, r.Fecha, r.Detalles, r.ID_Usuario,
-        (SELECT u.Email FROM usuarios u WHERE u.ID_Usuario = r.ID_Usuario) as UsuarioEmail, 
-        (SELECT b.Modelo FROM bombas b WHERE b.ID_Bomba = r.ID_Bomba) as BombaModelo,
-        JSON_ARRAYAGG(
-          IF(ts.ID_Tipo_Servicio IS NULL, NULL,
-            JSON_OBJECT('ID_Tipo_Servicio', ts.ID_Tipo_Servicio, 'Nombre', ts.Nombre)
-          )
-        ) as ServiciosJSON 
+        u.Email AS UsuarioEmail,
+        tb.Marca AS BombaMarca,
+        tb.Modelo AS BombaModelo,
+        c.Nombre_Cliente AS NombreClienteBomba,
+        c.RUT AS RUTClienteBomba,
+        COALESCE(
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT('ID_Tipo_Servicio', ts_inner.ID_Tipo_Servicio, 'Nombre', ts_inner.Nombre)
+            )
+            FROM reparacion_servicio_detalle rsd_inner
+            JOIN tipos_servicio ts_inner ON rsd_inner.FK_ID_Tipo_Servicio = ts_inner.ID_Tipo_Servicio
+            WHERE rsd_inner.FK_ID_Reparacion = r.ID_Reparacion
+          ),
+          JSON_ARRAY()
+        ) AS ServiciosJSON
       FROM 
         Reparaciones r
       LEFT JOIN 
-        reparacion_servicio_detalle rsd ON r.ID_Reparacion = rsd.FK_ID_Reparacion
+        Usuarios u ON r.ID_Usuario = u.ID_Usuario
+      LEFT JOIN
+        Bombas b ON r.ID_Bomba = b.ID_Bomba
       LEFT JOIN 
-        tipos_servicio ts ON rsd.FK_ID_Tipo_Servicio = ts.ID_Tipo_Servicio
+        Tipos_Bomba tb ON b.FK_ID_Tipo_Bomba = tb.ID_Tipo_Bomba
+      LEFT JOIN
+        Clientes c ON b.ID_Cliente = c.ID_Cliente
       WHERE 
-        r.ID_Reparacion = ?
-      GROUP BY 
-        r.ID_Reparacion; 
+        r.ID_Reparacion = ?;
     `;
     const [rows] = await pool.query(query, [id]);
     if (rows.length === 0) {
@@ -87,7 +103,7 @@ async function obtenerReparacionPorId(id) {
     const [reparacionProcesada] = procesarReparacionesConServicios(rows);
     return reparacionProcesada;
   } catch (error) {
-    console.error('Error al obtener reparación por ID:', error);
+    console.error('Error SQL en obtenerReparacionPorId:', error);
     throw error;
   }
 }
@@ -95,17 +111,20 @@ async function obtenerReparacionPorId(id) {
 async function crearReparacion(reparacion) {
   const { ID_Bomba, Fecha, Detalles, ID_Usuario, tiposServicioIds } = reparacion;
 
-  if (isNaN(ID_Bomba) || isNaN(ID_Usuario)) {
-    throw new Error('ID_Bomba e ID_Usuario deben ser números.');
+  if (!ID_Bomba || isNaN(ID_Bomba) || Number(ID_Bomba) <= 0) {
+      throw new Error('ID_Bomba es obligatorio y debe ser un número positivo.');
   }
-  if (!Fecha || !Detalles) {
-    throw new Error('Fecha y Detalles son campos obligatorios.');
+  if (!ID_Usuario || isNaN(ID_Usuario) || Number(ID_Usuario) <= 0) {
+    throw new Error('ID_Usuario es obligatorio y debe ser un número positivo.');
+  }
+  if (!Fecha) {
+    throw new Error('Fecha es un campo obligatorio.');
   }
   if (!Array.isArray(tiposServicioIds) || tiposServicioIds.length === 0) {
       throw new Error('Se debe seleccionar al menos un tipo de servicio.');
   }
-   if (!tiposServicioIds.every(id => !isNaN(id))) {
-       throw new Error('Todos los IDs de tipo de servicio deben ser números.');
+   if (!tiposServicioIds.every(idServ => idServ && !isNaN(idServ) && Number(idServ) > 0 )) {
+       throw new Error('Todos los IDs de tipo de servicio deben ser números positivos válidos.');
    }
 
   let connection;
@@ -119,24 +138,27 @@ async function crearReparacion(reparacion) {
     );
     const newReparacionId = resultReparacion.insertId;
 
-    if (tiposServicioIds && tiposServicioIds.length > 0) {
-      const detalleValues = tiposServicioIds.map(tipoId => [newReparacionId, tipoId]);
-      
-      await connection.query(
-        'INSERT INTO reparacion_servicio_detalle (FK_ID_Reparacion, FK_ID_Tipo_Servicio) VALUES ?',
-        [detalleValues]
-      );
-    }
-
-    await connection.commit();
+    const detalleValues = tiposServicioIds.map(tipoId => [newReparacionId, tipoId]);
+    await connection.query(
+      'INSERT INTO reparacion_servicio_detalle (FK_ID_Reparacion, FK_ID_Tipo_Servicio) VALUES ?',
+      [detalleValues]
+    );
     
+    await connection.commit();
     return newReparacionId;
 
   } catch (error) {
     if (connection) await connection.rollback(); 
-    console.error('Error al crear reparación (transacción revertida):', error);
+    console.error('Error al crear reparación:', error);
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        throw new Error('Uno de los tipos de servicio seleccionados no es válido.');
+        if (error.message.includes('fk_reparaciones_bombas')) {
+             throw new Error('La bomba especificada no existe.');
+        } else if (error.message.includes('fk_reparaciones_usuarios')) {
+            throw new Error('El usuario que registra la reparación no existe.');
+        } else if (error.message.includes('fk_rsd_tipos_servicio')) {
+            throw new Error('Uno de los tipos de servicio seleccionados no es válido.');
+        }
+        throw new Error('Error de referencia: Verifique los datos de Bomba, Usuario o Tipos de Servicio.');
     }
     throw error;
   } finally {
@@ -147,17 +169,23 @@ async function crearReparacion(reparacion) {
 async function actualizarReparacion(reparacion) {
   const { ID_Reparacion, ID_Bomba, Fecha, Detalles, ID_Usuario, tiposServicioIds } = reparacion;
 
-  if (isNaN(ID_Reparacion) || isNaN(ID_Bomba) || isNaN(ID_Usuario)) {
-    throw new Error('ID_Reparacion, ID_Bomba e ID_Usuario deben ser números.');
+  if (isNaN(ID_Reparacion) || Number(ID_Reparacion) <=0 ) {
+      throw new Error('ID_Reparacion es obligatorio y debe ser un número positivo.');
   }
-   if (!Fecha || !Detalles) { 
-    throw new Error('Fecha y Detalles son campos obligatorios.');
+  if (!ID_Bomba || isNaN(ID_Bomba) || Number(ID_Bomba) <= 0) {
+    throw new Error('ID_Bomba es obligatorio y debe ser un número positivo.');
+  }
+  if (!ID_Usuario || isNaN(ID_Usuario) || Number(ID_Usuario) <= 0) {
+    throw new Error('ID_Usuario es obligatorio y debe ser un número positivo.');
+  }
+   if (!Fecha) { 
+    throw new Error('Fecha es un campo obligatorio.');
   }
    if (!Array.isArray(tiposServicioIds) || tiposServicioIds.length === 0) {
       throw new Error('Se debe seleccionar al menos un tipo de servicio.');
   }
-   if (!tiposServicioIds.every(id => !isNaN(id))) {
-       throw new Error('Todos los IDs de tipo de servicio deben ser números.');
+   if (!tiposServicioIds.every(idServ => idServ && !isNaN(idServ) && Number(idServ) > 0)) {
+       throw new Error('Todos los IDs de tipo de servicio deben ser números positivos válidos.');
    }
 
   let connection;
@@ -171,30 +199,34 @@ async function actualizarReparacion(reparacion) {
     );
 
     if (resultUpdate.affectedRows === 0) {
-        await connection.rollback();
+        await connection.rollback(); 
         if (connection) connection.release();
-        return 0;
+        throw new Error('Reparación no encontrada para actualizar o los datos son idénticos a los existentes.');
     }
 
     await connection.query('DELETE FROM reparacion_servicio_detalle WHERE FK_ID_Reparacion = ?', [ID_Reparacion]);
 
-     if (tiposServicioIds && tiposServicioIds.length > 0) {
-        const detalleValues = tiposServicioIds.map(tipoId => [ID_Reparacion, tipoId]);
-        await connection.query(
-          'INSERT INTO reparacion_servicio_detalle (FK_ID_Reparacion, FK_ID_Tipo_Servicio) VALUES ?',
-          [detalleValues]
-        );
-    }
-
-    await connection.commit();
+    const detalleValues = tiposServicioIds.map(tipoId => [ID_Reparacion, tipoId]);
+    await connection.query(
+      'INSERT INTO reparacion_servicio_detalle (FK_ID_Reparacion, FK_ID_Tipo_Servicio) VALUES ?',
+      [detalleValues]
+    );
     
+    await connection.commit();
     return resultUpdate.affectedRows;
 
   } catch (error) {
     if (connection) await connection.rollback();
-    console.error('Error al actualizar reparación (transacción revertida):', error);
+    console.error('Error al actualizar reparación:', error);
      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        throw new Error('Uno de los tipos de servicio seleccionados no es válido.');
+         if (error.message.includes('fk_reparaciones_bombas')) {
+             throw new Error('La bomba especificada no existe.');
+        } else if (error.message.includes('fk_reparaciones_usuarios')) {
+            throw new Error('El usuario que registra la reparación no existe.');
+        } else if (error.message.includes('fk_rsd_tipos_servicio')) {
+            throw new Error('Uno de los tipos de servicio seleccionados no es válido.');
+        }
+        throw new Error('Error de referencia: Verifique los datos de Bomba, Usuario o Tipos de Servicio.');
     }
     throw error;
   } finally {
@@ -203,59 +235,71 @@ async function actualizarReparacion(reparacion) {
 }
 
 async function eliminarReparacion(id) {
-  if (isNaN(id)) {
-    throw new Error('ID de reparación debe ser un número.');
+  if (isNaN(id) || Number(id) <= 0) {
+    throw new Error('ID de reparación debe ser un número positivo.');
   }
+  let connection;
   try {
-    const [result] = await pool.query('DELETE FROM Reparaciones WHERE ID_Reparacion = ?', [id]);
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    await connection.query('DELETE FROM reparacion_servicio_detalle WHERE FK_ID_Reparacion = ?', [id]);
+    const [result] = await connection.query('DELETE FROM Reparaciones WHERE ID_Reparacion = ?', [id]);
+    
+    await connection.commit();
     return result.affectedRows; 
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error('Error al eliminar reparación:', error);
     throw error;
+  } finally {
+    if (connection) connection.release();
   }
 }
 
-async function obtenerUltimaReparacionDeBomba(bombaId) {
-  if (isNaN(bombaId) || bombaId <= 0) {
+async function obtenerReparacionesDeBomba(bombaId) {
+  if (isNaN(bombaId) || Number(bombaId) <= 0) {
     throw new Error('ID de bomba debe ser un número positivo.');
   }
-
   try {
      const query = `
       SELECT 
         r.ID_Reparacion, r.ID_Bomba, r.Fecha, r.Detalles, r.ID_Usuario,
-        (SELECT u.Email FROM usuarios u WHERE u.ID_Usuario = r.ID_Usuario) as UsuarioEmail, 
-        (SELECT b.Modelo FROM bombas b WHERE b.ID_Bomba = r.ID_Bomba) as BombaModelo,
-        JSON_ARRAYAGG(
-          IF(ts.ID_Tipo_Servicio IS NULL, NULL,
-            JSON_OBJECT('ID_Tipo_Servicio', ts.ID_Tipo_Servicio, 'Nombre', ts.Nombre)
-          )
-        ) as ServiciosJSON 
+        u.Email AS UsuarioEmail, 
+        tb.Marca AS BombaMarca,       /* Se obtienen de la bomba, no de la reparación directamente */
+        tb.Modelo AS BombaModelo,     /* Se obtienen de la bomba, no de la reparación directamente */
+        COALESCE(
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT('ID_Tipo_Servicio', ts_inner.ID_Tipo_Servicio, 'Nombre', ts_inner.Nombre)
+            )
+            FROM reparacion_servicio_detalle rsd_inner
+            JOIN tipos_servicio ts_inner ON rsd_inner.FK_ID_Tipo_Servicio = ts_inner.ID_Tipo_Servicio
+            WHERE rsd_inner.FK_ID_Reparacion = r.ID_Reparacion
+          ),
+          JSON_ARRAY()
+        ) AS ServiciosJSON
       FROM 
         Reparaciones r
       LEFT JOIN 
-        reparacion_servicio_detalle rsd ON r.ID_Reparacion = rsd.FK_ID_Reparacion
+        Usuarios u ON r.ID_Usuario = u.ID_Usuario
+      LEFT JOIN
+        Bombas b_reparacion ON r.ID_Bomba = b_reparacion.ID_Bomba /* Alias para la tabla Bombas unida a Reparaciones */
       LEFT JOIN 
-        tipos_servicio ts ON rsd.FK_ID_Tipo_Servicio = ts.ID_Tipo_Servicio
+        Tipos_Bomba tb ON b_reparacion.FK_ID_Tipo_Bomba = tb.ID_Tipo_Bomba /* Unir Tipos_Bomba a través de la bomba de la reparación */
       WHERE 
-        r.ID_Bomba = ?  -- Filtro por bomba
-      GROUP BY 
-        r.ID_Reparacion
+        r.ID_Bomba = ?
       ORDER BY
-        r.Fecha DESC -- Ordenar para obtener la última
-      LIMIT 1;        -- Tomar solo la última
+        r.Fecha DESC, r.ID_Reparacion DESC;
     `;
     const [rows] = await pool.query(query, [bombaId]);
-     if (rows.length === 0) {
-        return null;
-    }
-    const [reparacionProcesada] = procesarReparacionesConServicios(rows);
-    return reparacionProcesada;
+    return procesarReparacionesConServicios(rows); 
   } catch (error) {
-    console.error('Error al obtener la última reparación de la bomba:', error);
+    console.error('Error SQL en obtenerReparacionesDeBomba:', error);
     throw error;
   }
 }
+
 
 module.exports = {
     obtenerReparaciones,
@@ -263,5 +307,5 @@ module.exports = {
     crearReparacion,
     actualizarReparacion,
     eliminarReparacion,
-    obtenerUltimaReparacionDeBomba
+    obtenerReparacionesDeBomba
 };

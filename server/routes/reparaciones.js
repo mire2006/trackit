@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reparacionesModel = require('../models/reparaciones');
-const bombasModel = require('../models/bombas'); 
+const bombasModel = require('../models/bombas');
 
 const verificarAutenticacion = (req, res, next) => {
     if (!req.session.usuario) {
@@ -27,7 +27,7 @@ router.get('/', verificarAutenticacion, async (req, res) => {
     const reparaciones = await reparacionesModel.obtenerReparaciones();
     res.json(reparaciones);
   } catch (error) {
-     console.error("Error en GET /reparaciones:", error);
+     console.error("Error en GET /api/reparaciones:", error);
     res.status(500).json({ mensaje: 'Error al obtener reparaciones', error: error.message });
   }
 });
@@ -45,11 +45,10 @@ router.get('/:id', verificarAutenticacion, async (req, res) => {
             res.status(404).json({ mensaje: 'Reparación no encontrada.' });
         }
     } catch (error) {
-        console.error(`Error en GET /reparaciones/${req.params.id}:`, error);
+        console.error(`Error en GET /api/reparaciones/${req.params.id}:`, error);
         res.status(500).json({ mensaje: 'Error al obtener la reparación', error: error.message });
     }
 });
-
 
 router.post('/', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
@@ -60,13 +59,12 @@ router.post('/', verificarRol(['administrador', 'operador']), async (req, res) =
     }
 
     const reparacionId = await reparacionesModel.crearReparacion(reparacionData);
-    
     const nuevaReparacion = await reparacionesModel.obtenerReparacionPorId(reparacionId);
     res.status(201).json({ mensaje: 'Reparación creada exitosamente.', reparacion: nuevaReparacion });
 
   } catch (error) {
-     console.error("Error en POST /reparaciones:", error);
-     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio')) {
+     console.error("Error en POST /api/reparaciones:", error);
+     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') || error.message.includes('Error de referencia')) {
          return res.status(400).json({ mensaje: error.message });
      }
     res.status(500).json({ mensaje: 'Error al crear la reparación', error: error.message });
@@ -92,17 +90,16 @@ router.put('/:id', verificarRol(['administrador', 'operador']), async (req, res)
        const reparacionActualizada = await reparacionesModel.obtenerReparacionPorId(idReparacion);
       res.json({ mensaje: 'Reparación actualizada exitosamente.', reparacion: reparacionActualizada });
     } else {
-      res.status(404).json({ mensaje: 'Reparación no encontrada para actualizar.' });
+      res.status(404).json({ mensaje: 'Reparación no encontrada para actualizar o datos idénticos.' });
     }
   } catch (error) {
-    console.error(`Error en PUT /reparaciones/${req.params.id}:`, error);
-     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio')) {
+    console.error(`Error en PUT /api/reparaciones/${req.params.id}:`, error);
+     if (error.message.includes('obligatorio') || error.message.includes('número') || error.message.includes('tipo de servicio') || error.message.includes('Error de referencia')) {
          return res.status(400).json({ mensaje: error.message });
      }
     res.status(500).json({ mensaje: 'Error al actualizar la reparación', error: error.message });
   }
 });
-
 
 router.delete('/:id', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
@@ -117,34 +114,39 @@ router.delete('/:id', verificarRol(['administrador', 'operador']), async (req, r
         res.status(404).json({ mensaje: 'Reparación no encontrada para eliminar.' });
     }
   } catch (error) {
-    console.error(`Error en DELETE /reparaciones/${req.params.id}:`, error);
+    console.error(`Error en DELETE /api/reparaciones/${req.params.id}:`, error);
     res.status(500).json({ mensaje: 'Error al eliminar la reparación', error: error.message });
   }
 });
 
-router.get('/bomba/:bombaId', verificarAutenticacion, async (req, res) => { 
+router.get('/bomba/:bombaId/informe', verificarAutenticacion, async (req, res) => {
+  console.log(`Acceso a RUTA INFORME: /api/reparaciones/bomba/${req.params.bombaId}/informe`);
   try {
     const bombaId = parseInt(req.params.bombaId, 10);
-     if (isNaN(bombaId)) {
-        return res.status(400).json({ mensaje: 'El ID de bomba debe ser un número.' });
+    if (isNaN(bombaId) || bombaId <= 0) {
+      return res.status(400).json({ mensaje: 'El ID de bomba debe ser un número positivo.' });
     }
 
-    const ultimaReparacion = await reparacionesModel.obtenerUltimaReparacionDeBomba(bombaId);
     const bomba = await bombasModel.obtenerBombaPorId(bombaId); 
-
-    if (bomba) {
-        if (ultimaReparacion) {
-           res.json({ bomba, ultimaReparacion }); 
-        } else {
-           res.json({ bomba, ultimaReparacion: null, mensaje: 'La bomba no tiene reparaciones registradas.' }); 
-        }
-    } else {
-        res.status(404).json({ mensaje: 'Bomba no encontrada.' });
+    if (!bomba) {
+      return res.status(404).json({ mensaje: 'Bomba no encontrada.' });
     }
+
+    const reparaciones = await reparacionesModel.obtenerReparacionesDeBomba(bombaId);
+
+    res.json({ 
+        bomba: { 
+            Nombre_Cliente: bomba.Nombre_Cliente,
+            Marca: bomba.Marca,
+            Modelo: bomba.Modelo,
+            Circuito: bomba.Circuito 
+        }, 
+        reparaciones
+    });
 
   } catch (error) {
-     console.error(`Error en GET /reparaciones/bomba/${req.params.bombaId}:`, error);
-    res.status(500).json({ mensaje: 'Error al obtener la última reparación de la bomba', error: error.message });
+    console.error(`Error en GET /api/reparaciones/bomba/${req.params.bombaId}/informe:`, error);
+    res.status(500).json({ mensaje: 'Error al obtener datos para el informe de la bomba.', error: error.message || 'Error interno del servidor' });
   }
 });
 

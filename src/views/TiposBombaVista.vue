@@ -1,16 +1,16 @@
 <template>
   <div class="gestion-container">
-    <h1>Gestión de Usuarios</h1>
-    <p class="subtitulo">Crea, visualiza, edita y elimina usuarios del sistema.</p>
+    <h1>Gestión de Tipos de Bomba</h1>
+    <p class="subtitulo">Administra las marcas y modelos de las bombas.</p>
 
     <div class="toolbar-container">
       <button @click="abrirModalCrear" class="btn-crear" :disabled="cargandoGlobal">
-        Crear Nuevo Usuario
+        Crear Nuevo Tipo de Bomba
       </button>
       <div class="search-wrapper">
         <BarraBusqueda
-          v-model="searchTermUsuario"
-          placeholder="Buscar por ID, Nombre, Email, Rol..."
+          v-model="searchTermTipoBomba"
+          placeholder="Buscar por Marca, Modelo, Descripción..."
           :disabled="cargandoGlobal"
         />
       </div>
@@ -18,51 +18,52 @@
 
     <div v-if="cargandoGlobal" class="loading-indicator">
       <div class="spinner"></div>
-      <p>Cargando usuarios...</p>
+      <p>Cargando tipos de bomba...</p>
     </div>
 
     <div v-if="errorApi" class="error-message-api">
       {{ errorApi }}
     </div>
-    
+
     <div v-if="mostrarMensajeExitoGlobal" class="mensaje-exito-global">
       <span class="icono-exito">✓</span> {{ mensajeExitoGlobalTexto }}
     </div>
 
-    <TablaUsuarios
+    <TablaTiposBomba
       v-if="!cargandoGlobal && !errorApi"
-      :usuarios="filteredUsuarios"
+      :tipos-bomba="filteredTiposBomba"
       @editar="abrirModalEditar"
       @eliminar="confirmarEliminacion"
     />
-    <div v-if="!cargandoGlobal && !errorApi && filteredUsuarios.length === 0 && searchTermUsuario" class="no-datos">
-      <p>No se encontraron usuarios que coincidan con "{{ searchTermUsuario }}".</p>
+    <div v-if="!cargandoGlobal && !errorApi && filteredTiposBomba.length === 0 && searchTermTipoBomba" class="no-datos">
+      <p>No se encontraron tipos de bomba que coincidan con "{{ searchTermTipoBomba }}".</p>
     </div>
 
     <div v-if="mostrarModal" class="modal-overlay">
-      <div class="modal-content">
-        <h2>{{ esEdicion ? 'Editar Usuario' : 'Crear Nuevo Usuario' }}</h2>
-        <FormularioUsuario
-          :usuario-data="usuarioActual"
+      <div class="modal-content modal-tipo-bomba">
+        <h2>{{ esEdicion ? 'Editar Tipo de Bomba' : 'Crear Nuevo Tipo de Bomba' }}</h2>
+        <FormularioTipoBomba
+          :tipo-bomba-data="tipoBombaActual"
           :es-edicion="esEdicion"
           :cargando="cargandoFormulario"
           :error-formulario-prop="errorFormulario"
-          @guardar="procesarGuardadoUsuario"
+          @guardar="procesarGuardadoTipoBomba"
           @cancelar="cerrarModal"
         />
       </div>
     </div>
-    
+
     <div v-if="mostrarModalConfirmacion" class="modal-overlay">
         <div class="modal-content confirmacion-dialog">
             <h3>Confirmar Eliminación</h3>
-            <p>¿Estás seguro de que deseas eliminar al usuario <strong>{{ usuarioAEliminar?.Nombre }} 
-                 {{ usuarioAEliminar?.Apellido_Paterno }}</strong> (ID: {{ usuarioAEliminar?.ID_Usuario }})?</p>
-            <p class="advertencia-eliminacion">Esta acción no se puede deshacer.</p>
+            <p>¿Estás seguro de que deseas eliminar el tipo de bomba <strong>{{ tipoBombaAEliminar?.Marca }} - 
+                 {{ tipoBombaAEliminar?.Modelo }}</strong> (ID: {{ tipoBombaAEliminar?.ID_Tipo_Bomba }})?</p>
+            <p class="advertencia-eliminacion">Esta acción no se puede deshacer. Si este tipo de bomba está siendo 
+                 utilizado por alguna bomba registrada, no se podrá eliminar.</p>
             <div class="modal-actions">
                 <button @click="ejecutarEliminacion" class="btn-eliminar-confirm" :disabled="cargandoEliminacion">
-                    <span v-if="cargandoEliminacion" class="spinner-btn"></span>
-                    {{ cargandoEliminacion ? 'Eliminando...' : 'Sí, Eliminar' }}
+                  <span v-if="cargandoEliminacion" class="spinner-btn"></span>
+                  {{ cargandoEliminacion ? 'Eliminando...' : 'Sí, Eliminar' }}
                 </button>
                 <button @click="cancelarEliminacion" class="btn-cancelar" :disabled="cargandoEliminacion">Cancelar</button>
             </div>
@@ -76,11 +77,11 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
 import axios from '@/axios';
-import TablaUsuarios from '@/components/TablaUsuarios.vue';
-import FormularioUsuario from '@/components/FormularioUsuario.vue';
+import TablaTiposBomba from '@/components/TablaTiposBomba.vue';
+import FormularioTipoBomba from '@/components/FormularioTipoBomba.vue';
 import BarraBusqueda from '@/components/BarraBusqueda.vue';
 
-const listaUsuarios = ref([]);
+const listaTiposBomba = ref([]);
 const cargandoGlobal = ref(false);
 const cargandoFormulario = ref(false);
 const cargandoEliminacion = ref(false);
@@ -91,36 +92,31 @@ const errorEliminacion = ref(null);
 
 const mostrarModal = ref(false);
 const esEdicion = ref(false);
-const usuarioActual = reactive({
-  ID_Usuario: null,
-  Nombre: '',
-  Apellido_Paterno: '',
-  Apellido_Materno: '',
-  Email: '',
-  Rol: 'operador',
-  Contrasena: ''
+const tipoBombaActual = reactive({
+  ID_Tipo_Bomba: null,
+  Marca: '',
+  Modelo: '',
+  Descripcion_Tecnica: ''
 });
 
 const mostrarModalConfirmacion = ref(false);
-const usuarioAEliminar = ref(null);
+const tipoBombaAEliminar = ref(null);
 
 const mostrarMensajeExitoGlobal = ref(false);
 const mensajeExitoGlobalTexto = ref('');
 
-const searchTermUsuario = ref('');
+const searchTermTipoBomba = ref('');
 
-const filteredUsuarios = computed(() => {
-  if (!searchTermUsuario.value) {
-    return listaUsuarios.value;
+const filteredTiposBomba = computed(() => {
+  if (!searchTermTipoBomba.value) {
+    return listaTiposBomba.value;
   }
-  const lowerSearchTerm = searchTermUsuario.value.toLowerCase().trim();
-  return listaUsuarios.value.filter(usuario => {
-    const nombreCompleto = `${usuario.Nombre || ''} ${usuario.Apellido_Paterno || ''} ${usuario.Apellido_Materno || ''}`.toLowerCase();
+  const lowerSearchTerm = searchTermTipoBomba.value.toLowerCase().trim();
+  return listaTiposBomba.value.filter(tipo => {
     return (
-      (usuario.ID_Usuario?.toString().includes(lowerSearchTerm)) ||
-      (nombreCompleto.includes(lowerSearchTerm)) ||
-      (usuario.Email && usuario.Email.toLowerCase().includes(lowerSearchTerm)) ||
-      (usuario.Rol && usuario.Rol.toLowerCase().includes(lowerSearchTerm))
+      (tipo.Marca && tipo.Marca.toLowerCase().includes(lowerSearchTerm)) ||
+      (tipo.Modelo && tipo.Modelo.toLowerCase().includes(lowerSearchTerm)) ||
+      (tipo.Descripcion_Tecnica && tipo.Descripcion_Tecnica.toLowerCase().includes(lowerSearchTerm))
     );
   });
 });
@@ -134,25 +130,24 @@ const mostrarMensajeExitoTemporal = (mensaje) => {
   }, 2500);
 };
 
-const obtenerUsuariosAPI = async () => {
+const obtenerTiposBombaAPI = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
   try {
-    const { data } = await axios.get('/api/usuarios');
-    listaUsuarios.value = data;
+    const { data } = await axios.get('/api/tipos_bomba');
+    listaTiposBomba.value = data;
   } catch (error) {
-    errorApi.value = error.response?.data?.mensaje || 'Error al cargar la lista de usuarios.';
+    errorApi.value = error.response?.data?.mensaje || 'Error al cargar la lista de tipos de bomba.';
   } finally {
     cargandoGlobal.value = false;
   }
 };
 
-onMounted(obtenerUsuariosAPI);
+onMounted(obtenerTiposBombaAPI);
 
 const limpiarFormularioReactivo = () => {
-  Object.assign(usuarioActual, {
-    ID_Usuario: null, Nombre: '', Apellido_Paterno: '', Apellido_Materno: '',
-    Email: '', Rol: 'operador', Contrasena: ''
+  Object.assign(tipoBombaActual, {
+    ID_Tipo_Bomba: null, Marca: '', Modelo: '', Descripcion_Tecnica: ''
   });
   errorFormulario.value = null;
 };
@@ -163,16 +158,9 @@ const abrirModalCrear = () => {
   mostrarModal.value = true;
 };
 
-const abrirModalEditar = (usuario) => {
+const abrirModalEditar = (tipo) => {
   esEdicion.value = true;
-  Object.keys(usuarioActual).forEach(key => {
-    if (key !== 'Contrasena') {
-      usuarioActual[key] = usuario[key] !== undefined ? usuario[key] : '';
-    } else {
-      usuarioActual.Contrasena = '';
-    }
-  });
-   usuarioActual.ID_Usuario = usuario.ID_Usuario;
+  Object.assign(tipoBombaActual, tipo);
   errorFormulario.value = null;
   mostrarModal.value = true;
 };
@@ -181,37 +169,37 @@ const cerrarModal = () => {
   mostrarModal.value = false;
 };
 
-const procesarGuardadoUsuario = async (datosUsuarioDesdeFormulario) => {
+const procesarGuardadoTipoBomba = async (datosDesdeFormulario) => {
   errorFormulario.value = null;
   cargandoFormulario.value = true;
   
   try {
-    const payload = { ...datosUsuarioDesdeFormulario };
+    const payload = { ...datosDesdeFormulario };
     let mensajeConfirmacion = '';
 
     if (esEdicion.value) {
-      await axios.put(`/api/usuarios/${payload.ID_Usuario}`, payload);
-      mensajeConfirmacion = '¡Usuario actualizado correctamente!';
+      await axios.put(`/api/tipos_bomba/${payload.ID_Tipo_Bomba}`, payload);
+      mensajeConfirmacion = '¡Tipo de bomba actualizado correctamente!';
     } else {
-      await axios.post('/api/usuarios', payload);
-      mensajeConfirmacion = '¡Usuario creado correctamente!';
+      await axios.post('/api/tipos_bomba', payload);
+      mensajeConfirmacion = '¡Tipo de bomba creado correctamente!';
     }
     
     cerrarModal();
     mostrarMensajeExitoTemporal(mensajeConfirmacion);
-    await obtenerUsuariosAPI();
+    await obtenerTiposBombaAPI();
 
   } catch (error) {
-    errorFormulario.value = error.response?.data?.mensaje || (esEdicion.value ? 'Error al actualizar el usuario.' : 'Error al crear el usuario.');
+    errorFormulario.value = error.response?.data?.mensaje || (esEdicion.value ? 'Error al actualizar.' : 'Error al crear.');
   } finally {
     cargandoFormulario.value = false;
   }
 };
 
 const confirmarEliminacion = (id) => {
-  const user = listaUsuarios.value.find(u => u.ID_Usuario === id);
-  if (user) {
-    usuarioAEliminar.value = {...user};
+  const tipo = listaTiposBomba.value.find(t => t.ID_Tipo_Bomba === id);
+  if (tipo) {
+    tipoBombaAEliminar.value = {...tipo};
     mostrarModalConfirmacion.value = true;
     errorEliminacion.value = null;
   }
@@ -219,21 +207,21 @@ const confirmarEliminacion = (id) => {
 
 const cancelarEliminacion = () => {
   mostrarModalConfirmacion.value = false;
-  usuarioAEliminar.value = null;
+  tipoBombaAEliminar.value = null;
   errorEliminacion.value = null;
 };
 
 const ejecutarEliminacion = async () => {
-  if (!usuarioAEliminar.value) return;
+  if (!tipoBombaAEliminar.value) return;
   cargandoEliminacion.value = true;
   errorEliminacion.value = null;
   try {
-    await axios.delete(`/api/usuarios/${usuarioAEliminar.value.ID_Usuario}`);
+    await axios.delete(`/api/tipos_bomba/${tipoBombaAEliminar.value.ID_Tipo_Bomba}`);
     cancelarEliminacion();
-    mostrarMensajeExitoTemporal('¡Usuario eliminado correctamente!');
-    await obtenerUsuariosAPI();
+    mostrarMensajeExitoTemporal('¡Tipo de bomba eliminado correctamente!');
+    await obtenerTiposBombaAPI();
   } catch (error) {
-    errorEliminacion.value = error.response?.data?.mensaje || 'Error al eliminar el usuario.';
+    errorEliminacion.value = error.response?.data?.mensaje || 'Error al eliminar. Verifique si está en uso.';
   } finally {
     cargandoEliminacion.value = false;
   }
@@ -292,7 +280,7 @@ const ejecutarEliminacion = async () => {
 }
 
 .btn-crear {
-  background-color: #28a745;
+  background-color: #28a745; 
   color: white;
   padding: 10px 15px;
   border: none;
@@ -303,13 +291,14 @@ const ejecutarEliminacion = async () => {
   align-items: center;
   gap: 8px;
 }
-.btn-crear:hover {
+.btn-crear:hover { 
   background-color: #218838;
 }
 .btn-crear:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
 }
+
 
 .modal-overlay {
   position: fixed;
@@ -330,9 +319,11 @@ const ejecutarEliminacion = async () => {
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   width: 90%;
-  max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+}
+.modal-tipo-bomba {
+    max-width: 650px;
 }
 
 .modal-content h2 {
@@ -398,7 +389,7 @@ const ejecutarEliminacion = async () => {
   padding-top: 20px;
   border-top: 1px solid #eee;
 }
-.btn-eliminar-confirm, .btn-cancelar {
+.btn-eliminar-confirm, .btn-cancelar, .btn-guardar {
   padding: 10px 18px;
   border: none;
   border-radius: 4px;
@@ -421,8 +412,15 @@ const ejecutarEliminacion = async () => {
 .btn-cancelar:hover:not(:disabled) {
   background-color: #5a6268;
 }
-.btn-eliminar-confirm:disabled, .btn-cancelar:disabled {
-    background-color: #6c757d;
+.btn-guardar {
+  background-color: #007bff;
+  color: white;
+}
+.btn-guardar:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+.btn-eliminar-confirm:disabled, .btn-cancelar:disabled, .btn-guardar:disabled {
+    background-color: #adb5bd;
     cursor: not-allowed;
     opacity: 0.7;
 }
@@ -437,12 +435,13 @@ const ejecutarEliminacion = async () => {
   margin-right: 5px;
   vertical-align: middle;
 }
+
 .mensaje-exito-global {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #28a745;
+  background-color: #17a2b8;
   color: white;
   padding: 12px 25px;
   border-radius: 6px;

@@ -1,36 +1,17 @@
 <template>
   <form @submit.prevent="manejarSubmit" class="formulario-trackit">
-    <div class="form-grid">
+    <div class="form-grid-tipo-bomba">
       <div class="form-group">
-        <label for="nombreUsuario">Nombre:</label>
-        <input type="text" id="nombreUsuario" v-model="formData.Nombre" required :disabled="cargando">
+        <label for="marcaTipoBomba">Marca:</label>
+        <input type="text" id="marcaTipoBomba" v-model="formData.Marca" required :disabled="cargando">
       </div>
       <div class="form-group">
-        <label for="apellidoPaternoUsuario">Apellido Paterno:</label>
-        <input type="text" id="apellidoPaternoUsuario" v-model="formData.Apellido_Paterno" required :disabled="cargando">
+        <label for="modeloTipoBomba">Modelo:</label>
+        <input type="text" id="modeloTipoBomba" v-model="formData.Modelo" required :disabled="cargando">
       </div>
-      <div class="form-group">
-        <label for="apellidoMaternoUsuario">Apellido Materno:</label>
-        <input type="text" id="apellidoMaternoUsuario" v-model="formData.Apellido_Materno" :disabled="cargando">
-      </div>
-      <div class="form-group">
-        <label for="emailUsuario">Email:</label>
-        <input type="email" id="emailUsuario" v-model="formData.Email" required :disabled="cargando">
-      </div>
-      <div class="form-group">
-        <label for="rolUsuario">Rol:</label>
-        <select id="rolUsuario" v-model="formData.Rol" required :disabled="cargando">
-          <option value="operador">Operador</option>
-          <option value="tecnico">Técnico</option>
-          <option value="administrador">Administrador</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="contrasenaUsuario">Contraseña:</label>
-        <input type="password" id="contrasenaUsuario" v-model="formData.Contrasena" :placeholder="esEdicion ? 
-        'Dejar en blanco para no cambiar' : 'Mínimo 6 caracteres'" :required="!esEdicion" :disabled="cargando" autocomplete="new-password">
-        <small v-if="esEdicion && !formData.Contrasena">Dejar en blanco para no cambiar la contraseña.</small>
-        <small v-else-if="!esEdicion">Mínimo 6 caracteres.</small>
+      <div class="form-group full-width-tipo-bomba">
+        <label for="descripcionTecnicaTipoBomba">Descripción Técnica (Opcional):</label>
+        <textarea id="descripcionTecnicaTipoBomba" v-model="formData.Descripcion_Tecnica" rows="3" :disabled="cargando"></textarea>
       </div>
     </div>
 
@@ -39,7 +20,7 @@
     <div class="modal-actions">
       <button type="submit" class="btn-guardar" :disabled="cargando">
         <span v-if="cargando" class="spinner-btn"></span>
-        {{ cargando ? 'Guardando...' : (esEdicion ? 'Actualizar Usuario' : 'Crear Usuario') }}
+        {{ cargando ? 'Guardando...' : (esEdicion ? 'Actualizar Tipo' : 'Crear Tipo') }}
       </button>
       <button type="button" @click="$emit('cancelar')" class="btn-cancelar" :disabled="cargando">Cancelar</button>
     </div>
@@ -50,16 +31,13 @@
 import { reactive, watch, ref } from 'vue';
 
 const props = defineProps({
-  usuarioData: {
+  tipoBombaData: {
     type: Object,
     default: () => ({
-      ID_Usuario: null,
-      Nombre: '',
-      Apellido_Paterno: '',
-      Apellido_Materno: '',
-      Email: '',
-      Rol: 'operador',
-      Contrasena: ''
+      ID_Tipo_Bomba: null,
+      Marca: '',
+      Modelo: '',
+      Descripcion_Tecnica: ''
     })
   },
   esEdicion: {
@@ -78,14 +56,11 @@ const props = defineProps({
 
 const emit = defineEmits(['guardar', 'cancelar']);
 
-const formData = reactive({ ...props.usuarioData });
+const formData = reactive({ ...props.tipoBombaData });
 const errorLocal = ref('');
 
-watch(() => props.usuarioData, (newData) => {
+watch(() => props.tipoBombaData, (newData) => {
   Object.assign(formData, newData);
-  if (props.esEdicion) {
-      formData.Contrasena = '';
-  }
   errorLocal.value = '';
 }, { deep: true, immediate: true });
 
@@ -93,42 +68,29 @@ watch(() => props.errorFormularioProp, (newError) => {
   errorLocal.value = newError;
 });
 
-const validarUsuarioLocal = () => {
-  if (!formData.Nombre || !formData.Apellido_Paterno || !formData.Email || !formData.Rol) {
-    return 'Nombre, Apellido Paterno, Email y Rol son obligatorios.';
-  }
-  if (!props.esEdicion && !formData.Contrasena) {
-    return 'La contraseña es obligatoria para nuevos usuarios.';
-  }
-  if (formData.Contrasena && formData.Contrasena.length < 6) {
-    return 'La contraseña debe tener al menos 6 caracteres.';
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.Email)) {
-    return 'Formato de Email inválido.';
+const validarTipoBombaLocal = () => {
+  if (!formData.Marca || !formData.Modelo) {
+    return 'Marca y Modelo son campos obligatorios.';
   }
   return null;
 };
 
 const manejarSubmit = () => {
   errorLocal.value = '';
-  const errorValidacion = validarUsuarioLocal();
+  const errorValidacion = validarTipoBombaLocal();
   if (errorValidacion) {
     errorLocal.value = errorValidacion;
     return;
   }
-  const payloadEmit = { ...formData };
-  if (props.esEdicion && !payloadEmit.Contrasena) {
-    delete payloadEmit.Contrasena;
-  }
-  emit('guardar', payloadEmit);
+  emit('guardar', { ...formData });
 };
 </script>
 
 <style scoped>
 
-.form-grid {
+.form-grid-tipo-bomba {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px 20px;
 }
 
@@ -136,6 +98,9 @@ const manejarSubmit = () => {
   margin-bottom: 5px;
   display: flex;
   flex-direction: column;
+}
+.form-group.full-width-tipo-bomba {
+    grid-column: 1 / -1;
 }
 
 .form-group label {
@@ -146,9 +111,7 @@ const manejarSubmit = () => {
 }
 
 .form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
-.form-group select {
+.form-group textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid #ccc;
@@ -156,21 +119,19 @@ const manejarSubmit = () => {
   box-sizing: border-box;
   font-size: 0.95em;
 }
+.form-group textarea {
+    resize: vertical;
+}
 .form-group input:disabled,
-.form-group select:disabled {
+.form-group textarea:disabled {
     background-color: #e9ecef;
     cursor: not-allowed;
 }
 .form-group input:focus,
-.form-group select:focus {
+.form-group textarea:focus {
     border-color: #4e4b4c;
     box-shadow: 0 0 0 0.2rem rgba(78, 75, 76, 0.25);
     outline: none;
-}
-.form-group small {
-    font-size: 0.8em;
-    color: #666;
-    margin-top: 4px;
 }
 
 .modal-actions {

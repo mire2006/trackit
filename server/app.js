@@ -23,7 +23,7 @@ app.use(
   })
 );
 
-const routes = require('./routes');
+const routes = require('./routes'); 
 app.use('/api', routes);
 
 app.use('/qrcodes', express.static(path.join(__dirname, 'public/qrcodes')));

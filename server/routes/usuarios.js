@@ -162,5 +162,52 @@ router.delete('/:id', verificarRol(['administrador']), async (req, res) => {
   }
 });
 
+router.put('/me/password', verificarAutenticacion, async (req, res) => {
+  try {
+    const idUsuarioLogueado = req.session.usuario.ID_Usuario;
+    const { Contrasena } = req.body;
+
+    if (!Contrasena) {
+      return res.status(400).json({ mensaje: 'La nueva contraseña es requerida.' });
+    }
+    if (Contrasena.length < 6) {
+      return res.status(400).json({ mensaje: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const usuarioActual = await usuariosModel.obtenerUsuarioPorId(idUsuarioLogueado);
+    if (!usuarioActual) {
+         req.session.destroy();
+         res.clearCookie('connect.sid');
+        return res.status(404).json({ mensaje: 'Usuario no encontrado. Por favor, inicie sesión de nuevo.' });
+    }
+
+    const datosParaActualizar = {
+        ID_Usuario: idUsuarioLogueado,
+        Nombre: usuarioActual.Nombre,
+        Apellido_Paterno: usuarioActual.Apellido_Paterno,
+        Apellido_Materno: usuarioActual.Apellido_Materno,
+        Email: usuarioActual.Email,
+        Rol: usuarioActual.Rol,
+        Contrasena: Contrasena
+    };
+
+    const affectedRows = await usuariosModel.actualizarUsuario(datosParaActualizar);
+
+    if (affectedRows > 0) {
+      res.json({ mensaje: 'Contraseña actualizada exitosamente.' });
+    } else {
+      res.status(500).json({ mensaje: 'No se pudo actualizar la contraseña.' });
+    }
+  } catch (error) {
+    console.error('Error en PUT /api/usuarios/me/password:', error);
+    if (error.message.includes('contraseña') || error.message.includes('Email inválido') || error.message.includes('Faltan datos')) {
+        return res.status(400).json({ mensaje: error.message });
+    }
+     if (error.message.includes('ya está registrado')) { 
+        return res.status(409).json({ mensaje: error.message });
+    }
+    res.status(500).json({ mensaje: 'Error interno del servidor al actualizar la contraseña.', error: error.message });
+  }
+});
 
 module.exports = router;

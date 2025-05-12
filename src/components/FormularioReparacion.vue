@@ -7,13 +7,18 @@
 
     <form @submit.prevent="guardarReparacion">
       <div class="form-group">
-        <label for="bomba">Bomba:</label>
-        <select id="bomba" v-model="formData.ID_Bomba" required>
-          <option disabled value="">Seleccione una bomba</option>
-          <option v-for="bomba in bombasList" :key="bomba.ID_Bomba" :value="bomba.ID_Bomba">
-            ID: {{ bomba.ID_Bomba }} - {{ bomba.Marca }} {{ bomba.Modelo }} (Cliente ID: {{ bomba.ID_Cliente }})
-          </option>
-        </select>
+        <label for="bomba-busqueda">Bomba:</label>
+        <BusquedaBomba
+          id="bomba-busqueda"
+          v-model="formData.ID_Bomba"
+          :opciones="bombasList"
+          placeholderSelect="Seleccione o busque una bomba"
+          placeholderInput="Buscar por ID, Marca, Modelo, Cliente..."
+          :disabled="isLoading"
+        />
+        <p v-if="submitted && !formData.ID_Bomba" class="validation-error">
+          Debe seleccionar una bomba.
+        </p>
       </div>
 
       <div class="form-group">
@@ -35,9 +40,9 @@
           </div>
         </div>
         <p v-else>Cargando tipos de servicio...</p>
-         <p v-if="submitted && selectedTiposServicioIds.length === 0" class="validation-error">
-           Debe seleccionar al menos un tipo de servicio.
-         </p>
+        <p v-if="submitted && selectedTiposServicioIds.length === 0" class="validation-error">
+          Debe seleccionar al menos un tipo de servicio.
+        </p>
       </div>
 
       <div class="form-group">
@@ -58,6 +63,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import axios from '../axios';
+import BusquedaBomba from './BusquedaBomba.vue';
 
 const props = defineProps({
   reparacionParaEditar: {
@@ -69,7 +75,7 @@ const props = defineProps({
 const emit = defineEmits(['reparacionGuardada', 'cancelado']);
 
 const formData = reactive({
-  ID_Bomba: '',
+  ID_Bomba: null,
   Fecha: new Date().toISOString().slice(0, 10),
   Detalles: '',
 });
@@ -97,25 +103,28 @@ async function cargarDatosIniciales() {
   } catch (error) {
     console.error('Error cargando datos iniciales:', error);
     mensajeError.value = 'Error al cargar datos necesarios (tipos de servicio o bombas).';
+    if (error.response && error.response.data && error.response.data.mensaje) {
+        mensajeError.value += ` Detalle: ${error.response.data.mensaje}`;
+    }
   } finally {
     isLoading.value = false;
   }
 }
 
 function poblarFormularioSiEdita() {
-   if (esEdicion.value) {
-     const reparacion = props.reparacionParaEditar;
-     formData.ID_Bomba = reparacion.ID_Bomba;
-     formData.Fecha = reparacion.Fecha ? new Date(reparacion.Fecha).toISOString().slice(0, 10) : '';
-     formData.Detalles = reparacion.Detalles || '';
-     selectedTiposServicioIds.value = reparacion.Servicios ? reparacion.Servicios.map(s => s.ID_Tipo_Servicio) : [];
-   } else {
-       formData.ID_Bomba = '';
-       formData.Fecha = new Date().toISOString().slice(0, 10);
-       formData.Detalles = '';
-       selectedTiposServicioIds.value = [];
-       submitted.value = false;
-   }
+    if (esEdicion.value) {
+      const reparacion = props.reparacionParaEditar;
+      formData.ID_Bomba = reparacion.ID_Bomba;
+      formData.Fecha = reparacion.Fecha ? new Date(reparacion.Fecha).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+      formData.Detalles = reparacion.Detalles || '';
+      selectedTiposServicioIds.value = reparacion.Servicios ? reparacion.Servicios.map(s => s.ID_Tipo_Servicio) : [];
+    } else {
+      formData.ID_Bomba = null; 
+      formData.Fecha = new Date().toISOString().slice(0, 10);
+      formData.Detalles = '';
+      selectedTiposServicioIds.value = [];
+      submitted.value = false;
+    }
 }
 
 async function guardarReparacion() {
@@ -123,38 +132,43 @@ async function guardarReparacion() {
   mensajeError.value = '';
   mensajeExito.value = ''; 
 
+  if (!formData.ID_Bomba) {
+    mensajeError.value = 'Debe seleccionar una bomba.';
+    return;
+  }
   if (selectedTiposServicioIds.value.length === 0) {
     mensajeError.value = 'Debe seleccionar al menos un tipo de servicio.';
     return;
   }
-  if (!formData.ID_Bomba || !formData.Fecha) {
-       mensajeError.value = 'Debe seleccionar una bomba y una fecha.';
-       return;
+   if (!formData.Fecha) {
+    mensajeError.value = 'Debe seleccionar una fecha.';
+    return;
   }
 
   isLoading.value = true;
 
   let idUsuarioLogueado = null;
   try {
-      const usuarioDataString = localStorage.getItem('usuario');
-      if (usuarioDataString) {
-          const usuarioData = JSON.parse(usuarioDataString);
-          idUsuarioLogueado = usuarioData.ID_Usuario;
-      }
+    const usuarioDataString = localStorage.getItem('usuario');
+    if (usuarioDataString) {
+      const usuarioData = JSON.parse(usuarioDataString);
+      idUsuarioLogueado = usuarioData.ID_Usuario;
+    }
   } catch(e) {
-       console.error("Error obteniendo ID de usuario:", e);
-       mensajeError.value = "Error obteniendo información del usuario. Intente iniciar sesión de nuevo.";
-       isLoading.value = false;
-       return;
+    console.error("Error obteniendo ID de usuario:", e);
+    mensajeError.value = "Error obteniendo información del usuario. Intente iniciar sesión de nuevo.";
+    isLoading.value = false;
+    return;
   }
+
   if (!idUsuarioLogueado) {
-       mensajeError.value = "No se pudo identificar al usuario. Intente iniciar sesión de nuevo.";
-       isLoading.value = false;
-       return;
+    mensajeError.value = "No se pudo identificar al usuario. Intente iniciar sesión de nuevo.";
+    isLoading.value = false;
+    return;
   }
 
   const payload = {
-    ID_Bomba: formData.ID_Bomba,
+    ID_Bomba: Number(formData.ID_Bomba),
     Fecha: formData.Fecha,
     Detalles: formData.Detalles,
     ID_Usuario: idUsuarioLogueado,
@@ -170,21 +184,23 @@ async function guardarReparacion() {
     } else {
       response = await axios.post('/api/reparaciones', payload);
       mensajeExito.value = 'Reparación creada exitosamente.';
-       formData.ID_Bomba = '';
-       formData.Fecha = new Date().toISOString().slice(0, 10);
-       formData.Detalles = '';
-       selectedTiposServicioIds.value = [];
-       submitted.value = false;
+      formData.ID_Bomba = null;
+      formData.Fecha = new Date().toISOString().slice(0, 10);
+      formData.Detalles = '';
+      selectedTiposServicioIds.value = [];
+      submitted.value = false;
     }
-
-    emit('reparacionGuardada', response.data.reparacion);
+    
+    setTimeout(() => {
+        emit('reparacionGuardada', response.data.reparacion);
+    }, 1500);
 
   } catch (error) {
     console.error('Error al guardar reparación:', error);
     if (error.response && error.response.data && error.response.data.mensaje) {
       mensajeError.value = error.response.data.mensaje;
     } else {
-      mensajeError.value = `Error al ${esEdicion.value ? 'actualizar' : 'crear'} la reparación.`;
+      mensajeError.value = `Error al ${esEdicion.value ? 'actualizar' : 'crear'} la reparación. Verifique los datos e intente de nuevo.`;
     }
   } finally {
     isLoading.value = false;
@@ -196,24 +212,32 @@ function cancelar() {
 }
 
 onMounted(() => {
-  cargarDatosIniciales();
+  cargarDatosIniciales().then(() => {
+      poblarFormularioSiEdita();
+  });
 });
 
-watch(() => props.reparacionParaEditar, (newVal) => { 
-    console.log('Watcher: reparacionParaEditar cambió', newVal); 
-    poblarFormularioSiEdita();
-}, { immediate: true });
+watch(() => props.reparacionParaEditar, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    if (bombasList.value.length === 0 || tiposServicioList.value.length === 0) {
+        cargarDatosIniciales().then(() => {
+            poblarFormularioSiEdita();
+        });
+    } else {
+        poblarFormularioSiEdita();
+    }
+  }
+}, { immediate: true, deep: true });
 
 </script>
 
 <style scoped>
-
 .formulario-reparacion-container {
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
   background-color: #f9f9f9;
-  max-width: 600px;
+  max-width: 700px;
   margin: 20px auto;
 }
 
@@ -262,8 +286,8 @@ h3 {
   margin-bottom: 5px;
 }
 .checkbox-item input[type="checkbox"] {
-   margin-right: 8px; 
-   cursor: pointer;
+    margin-right: 8px; 
+    cursor: pointer;
 }
 .checkbox-item label {
     margin-bottom: 0; 

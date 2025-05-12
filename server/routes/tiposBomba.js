@@ -47,7 +47,7 @@ router.get('/:id', verificarRol(['administrador', 'operador']), async (req, res)
     }
 });
 
-router.post('/', verificarRol(['administrador']), async (req, res) => {
+router.post('/', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
     const nuevoId = await tiposBombaModel.crearTipoBomba(req.body);
     const nuevoTipo = await tiposBombaModel.obtenerTipoBombaPorId(nuevoId);
@@ -60,7 +60,7 @@ router.post('/', verificarRol(['administrador']), async (req, res) => {
   }
 });
 
-router.put('/:id', verificarRol(['administrador']), async (req, res) => {
+router.put('/:id', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
      if (isNaN(id)) {
@@ -83,7 +83,7 @@ router.put('/:id', verificarRol(['administrador']), async (req, res) => {
   }
 });
 
-router.delete('/:id', verificarRol(['administrador']), async (req, res) => {
+router.delete('/:id', verificarRol(['administrador', 'operador']), async (req, res) => {
   try {
      const id = parseInt(req.params.id, 10);
      if (isNaN(id)) {
