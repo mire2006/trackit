@@ -1,23 +1,72 @@
+# System files
 .DS_Store
-node_modules
-/dist
+Thumbs.db
 
+# Dependencies
+/node_modules/
+/server/node_modules/
 
-# local env files
+# Build output
+/dist/
+
+# Local Environment Variables
+# Ignore .env files in root and in /server directory
+.env
 .env.local
 .env.*.local
+server/.env
+server/.env.*.local 
 
 # Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # Editor directories and files
 .idea
-.vscode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+
+# User-specific files
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Vue specific
+.temp
+/coverage/
+*.log
+
+# Operating System Files
+ehthumbs.db
+ehthumbs_vista.db
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache files
+.cache
