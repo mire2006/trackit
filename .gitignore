@@ -70,3 +70,6 @@ ehthumbs_vista.db
 
 # parcel-bundler cache files
 .cache
+
+# QR Codes
+/server/public/qrcodes/
