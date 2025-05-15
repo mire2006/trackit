@@ -47,7 +47,7 @@ export default {
       this.cargando = true;
 
       try {
-        const response = await axios.post('/api/usuarios/login', {
+        const response = await axios.post('/usuarios/login', {
           email: this.email,
           contrasena: this.contrasena,
         });

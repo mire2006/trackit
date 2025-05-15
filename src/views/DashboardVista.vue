@@ -68,7 +68,7 @@ const cargarUsuarioDesdeLocalStorage = () => {
 
 const obtenerDatosPerfil = async () => {
   try {
-    const { data } = await axios.get('/api/usuarios/me');
+    const { data } = await axios.get('usuarios/me');
     usuario.value = data;
   } catch (error) {
     console.error('Error al obtener datos del perfil:', error);

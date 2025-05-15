@@ -118,7 +118,7 @@ const cargarDatosDelInforme = async () => {
   cargando.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/api/reparaciones/bomba/${props.bombaIdParaInforme}/informe`);
+    const response = await axios.get(`/reparaciones/bomba/${props.bombaIdParaInforme}/informe`);
     datosInforme.value = response.data;
   } catch (err) {
     console.error("Error cargando datos del informe:", err);

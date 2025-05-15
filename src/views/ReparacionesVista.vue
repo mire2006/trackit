@@ -62,11 +62,11 @@
       <p>No hay reparaciones registradas todavía. ¡Crea la primera!</p>
     </div>
 
-    <div v-if="mostrarModalReparacion" class="modal-overlay">
+<div v-if="mostrarModalReparacion" class="modal-overlay">
       <div class="modal-content modal-reparacion">
         <FormularioReparacion
           :reparacion-para-editar="reparacionSeleccionadaParaForm"
-          @reparacion-guardada="manejarReparacionGuardada"
+          :lista-tipos-servicio-prop="listaTiposServicioActivos" :cargando-tipos-servicio-prop="cargandoTiposServicio" :error-tipos-servicio-prop="errorTiposServicio" @reparacion-guardada="manejarReparacionGuardada"
           @cancelado="cerrarModalReparacion"
         />
       </div>
@@ -127,6 +127,10 @@ const bombaIdParaInformeSeleccionada = ref(null);
 
 const paginaActual = ref(1);
 const itemsPorPagina = ref(10);
+
+const listaTiposServicioActivos = ref([]);
+const cargandoTiposServicio = ref(false);
+const errorTiposServicio = ref(null);
 
 const formatearFechaParaBusqueda = (fechaISO) => {
   if (!fechaISO) return '';
@@ -194,7 +198,7 @@ const obtenerReparacionesAPI = async () => {
   errorApi.value = null;
   paginaActual.value = 1; 
   try {
-    const { data } = await axios.get('/api/reparaciones');
+    const { data } = await axios.get('/reparaciones');
     listaReparaciones.value = data;
   } catch (error) {
     console.error("Error al cargar reparaciones:", error);
@@ -204,17 +208,45 @@ const obtenerReparacionesAPI = async () => {
   }
 };
 
+const obtenerTiposServicioActivosAPI = async () => {
+  cargandoTiposServicio.value = true;
+  errorTiposServicio.value = null;
+  try {
+    const { data } = await axios.get('/tipos_servicio/activos');
+    listaTiposServicioActivos.value = data;
+  } catch (error) {
+    console.error("[ReparacionesVista] Error al cargar tipos de servicio activos:", error);
+    errorTiposServicio.value = error.response?.data?.mensaje || 'Error al cargar los tipos de servicio.';
+  } finally {
+    cargandoTiposServicio.value = false;
+  }
+};
+
 onMounted(async () => {
   await obtenerReparacionesAPI();
+  await obtenerTiposServicioActivosAPI();
 });
 
 const abrirModalCrearReparacion = () => {
+  if (listaTiposServicioActivos.value.length === 0 && !cargandoTiposServicio.value) {
+      if(errorTiposServicio.value) {
+        alert(`Error al cargar tipos de servicio: ${errorTiposServicio.value}. No se puede crear una reparación.`);
+      } else {
+        alert('No hay tipos de servicio activos disponibles. No se puede crear una reparación. Intente recargar o contacte al administrador.');
+      }
+      return;
+  }
+
   esEdicionReparacion.value = false;
-  reparacionSeleccionadaParaForm.value = null; 
+  reparacionSeleccionadaParaForm.value = null;
   mostrarModalReparacion.value = true;
 };
 
 const abrirModalEditarReparacion = (reparacion) => {
+  if (listaTiposServicioActivos.value.length === 0 && !cargandoTiposServicio.value && !errorTiposServicio.value) {
+      obtenerTiposServicioActivosAPI();
+  }
+
   esEdicionReparacion.value = true;
   reparacionSeleccionadaParaForm.value = { ...reparacion }; 
   mostrarModalReparacion.value = true;
@@ -253,7 +285,7 @@ const ejecutarEliminacionReparacion = async () => {
   cargandoEliminacionReparacion.value = true;
   errorEliminacionReparacion.value = null;
   try {
-    await axios.delete(`/api/reparaciones/${reparacionAEliminar.value.ID_Reparacion}`);
+    await axios.delete(`/reparaciones/${reparacionAEliminar.value.ID_Reparacion}`);
     cancelarEliminacionReparacion();
     mostrarMensajeExitoTemporal('¡Reparación eliminada correctamente!');
     await obtenerReparacionesAPI();

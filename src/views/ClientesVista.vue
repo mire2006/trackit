@@ -186,7 +186,7 @@ const obtenerClientes = async () => {
   errorApi.value = null;
   paginaActual.value = 1;
   try {
-    const { data } = await axios.get('/api/clientes');
+    const { data } = await axios.get('/clientes');
     listaClientes.value = data;
   } catch (error) {
     console.error("Error al obtener clientes:", error);
@@ -238,10 +238,10 @@ const procesarGuardadoCliente = async (datosClienteDesdeFormulario) => {
     const payload = { ...datosClienteDesdeFormulario };
     let mensajeConfirmacion = '';
     if (esEdicion.value) {
-      await axios.put(`/api/clientes/${payload.ID_Cliente}`, payload);
+      await axios.put(`/clientes/${payload.ID_Cliente}`, payload);
       mensajeConfirmacion = '¡Cliente actualizado correctamente!';
     } else {
-      await axios.post('/api/clientes', payload);
+      await axios.post('/clientes', payload);
       mensajeConfirmacion = '¡Cliente creado correctamente!';
     }
     cerrarModal();
@@ -276,7 +276,7 @@ const ejecutarEliminacion = async () => {
   cargandoEliminacion.value = true;
   errorEliminacion.value = null;
   try {
-    await axios.delete(`/api/clientes/${clienteAEliminar.value.ID_Cliente}`);
+    await axios.delete(`/clientes/${clienteAEliminar.value.ID_Cliente}`);
     cancelarEliminacion();
     mostrarMensajeExitoTemporal('¡Cliente eliminado correctamente!');
     await obtenerClientes(); 

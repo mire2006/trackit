@@ -1,7 +1,6 @@
 <template>
   <div class="tabla-reparaciones-container">
     <div v-if="!reparaciones || reparaciones.length === 0" class="no-datos">
-      <p>No hay reparaciones para mostrar.</p>
     </div>
     <table v-else class="tabla-trackit">
       <thead>
@@ -172,15 +171,4 @@ const truncarDetalles = (detalles, longitud = 50) => {
 }
 .btn-informe:hover { background-color: #138496; }
 
-
-.no-datos {
-  text-align: center;
-  padding: 20px;
-  color: #777;
-  font-style: italic;
-  background-color: #f9f9f9;
-  border: 1px dashed #ddd;
-  border-radius: 5px;
-  margin-top: 15px;
-}
 </style>

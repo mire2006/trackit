@@ -34,13 +34,14 @@
       </tbody>
     </table>
 
-    <div v-if="qrSeleccionado" class="modal-overlay" @click.self="cerrarModalQR">
+    <div v-if="qrSeleccionado && bombaConQR" class="modal-overlay" @click.self="cerrarModalQR">
       <div class="modal-content modal-qr">
         <h3>Código QR para Bomba ID: {{ bombaConQR?.ID_Bomba }}</h3>
         <p><strong>Cliente:</strong> {{ bombaConQR?.Nombre_Cliente }}</p>
         <p><strong>Modelo:</strong> {{ bombaConQR?.Marca }} - {{ bombaConQR?.Modelo }}</p>
         <p><strong>Circuito:</strong> {{ bombaConQR?.Circuito }}</p>
-        <img :src="fullQrPath" alt="Código QR" class="qr-image-modal"/>
+        <img :src="fullQrPath" alt="Código QR" class="qr-image-modal" v-if="fullQrPath"/>
+        <p v-else>Cargando QR...</p>
         <button @click="cerrarModalQR" class="btn-cancelar">Cerrar</button>
       </div>
     </div>
@@ -65,11 +66,19 @@ const emit = defineEmits(['editar', 'eliminar']);
 const qrSeleccionado = ref(null);
 const bombaConQR = ref(null);
 
-const backendBaseUrl = axios.defaults.baseURL;
+const getBackendRootUrl = () => {
+  const apiUrl = process.env.VUE_APP_API_URL || axios.defaults.baseURL || 'http://localhost:3000/api';
+  if (apiUrl.endsWith('/api')) {
+    return apiUrl.slice(0, -4);
+  }
+  return apiUrl;
+};
+
+const backendRootUrl = getBackendRootUrl();
 
 const fullQrPath = computed(() => {
   if (qrSeleccionado.value) {
-    return `${backendBaseUrl}${qrSeleccionado.value}`;
+    return `${backendRootUrl}${qrSeleccionado.value}`;
   }
   return '';
 });

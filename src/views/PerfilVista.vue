@@ -64,7 +64,7 @@
         }
   
         try {
-          const response = await axios.put(`/api/usuarios/${this.usuario.ID_Usuario}`, {
+          const response = await axios.put(`/usuarios/${this.usuario.ID_Usuario}`, {
             Contrasena: this.nuevaContrasena,
           });
   

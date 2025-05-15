@@ -47,7 +47,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import axios from '@/axios'; // IMPORTADO AXIOS
+import axios from '@/axios'; 
 
 const userRole = ref(null);
 const router = useRouter();
@@ -98,7 +98,7 @@ watch(() => route.path, () => {
 
 const logout = async () => {
   try {
-    await axios.post('/api/usuarios/logout');
+    await axios.post('/usuarios/logout');
   } catch (error) {
     console.error("Error al cerrar sesión en el backend:", error);
   } finally {

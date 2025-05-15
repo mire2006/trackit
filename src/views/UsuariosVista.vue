@@ -138,7 +138,7 @@ const obtenerUsuariosAPI = async () => {
   cargandoGlobal.value = true;
   errorApi.value = null;
   try {
-    const { data } = await axios.get('/api/usuarios');
+    const { data } = await axios.get('/usuarios');
     listaUsuarios.value = data;
   } catch (error) {
     errorApi.value = error.response?.data?.mensaje || 'Error al cargar la lista de usuarios.';
@@ -190,10 +190,10 @@ const procesarGuardadoUsuario = async (datosUsuarioDesdeFormulario) => {
     let mensajeConfirmacion = '';
 
     if (esEdicion.value) {
-      await axios.put(`/api/usuarios/${payload.ID_Usuario}`, payload);
+      await axios.put(`/usuarios/${payload.ID_Usuario}`, payload);
       mensajeConfirmacion = '¡Usuario actualizado correctamente!';
     } else {
-      await axios.post('/api/usuarios', payload);
+      await axios.post('/usuarios', payload);
       mensajeConfirmacion = '¡Usuario creado correctamente!';
     }
     
@@ -228,7 +228,7 @@ const ejecutarEliminacion = async () => {
   cargandoEliminacion.value = true;
   errorEliminacion.value = null;
   try {
-    await axios.delete(`/api/usuarios/${usuarioAEliminar.value.ID_Usuario}`);
+    await axios.delete(`/usuarios/${usuarioAEliminar.value.ID_Usuario}`);
     cancelarEliminacion();
     mostrarMensajeExitoTemporal('¡Usuario eliminado correctamente!');
     await obtenerUsuariosAPI();

@@ -182,7 +182,7 @@ const obtenerTiposBombaAPI = async () => {
   errorApi.value = null;
   paginaActual.value = 1;
   try {
-    const { data } = await axios.get('/api/tipos_bomba');
+    const { data } = await axios.get('/tipos_bomba');
     listaTiposBomba.value = data;
   } catch (error) {
     console.error("Error al cargar tipos de bomba:", error);
@@ -227,10 +227,10 @@ const procesarGuardadoTipoBomba = async (datosDesdeFormulario) => {
     let mensajeConfirmacion = '';
 
     if (esEdicion.value) {
-      await axios.put(`/api/tipos_bomba/${payload.ID_Tipo_Bomba}`, payload);
+      await axios.put(`tipos_bomba/${payload.ID_Tipo_Bomba}`, payload);
       mensajeConfirmacion = '¡Tipo de bomba actualizado correctamente!';
     } else {
-      await axios.post('/api/tipos_bomba', payload);
+      await axios.post('tipos_bomba', payload);
       mensajeConfirmacion = '¡Tipo de bomba creado correctamente!';
     }
     
@@ -266,7 +266,7 @@ const ejecutarEliminacion = async () => {
   cargandoEliminacion.value = true;
   errorEliminacion.value = null;
   try {
-    await axios.delete(`/api/tipos_bomba/${tipoBombaAEliminar.value.ID_Tipo_Bomba}`);
+    await axios.delete(`tipos_bomba/${tipoBombaAEliminar.value.ID_Tipo_Bomba}`);
     cancelarEliminacion();
     mostrarMensajeExitoTemporal('¡Tipo de bomba eliminado correctamente!');
     await obtenerTiposBombaAPI();

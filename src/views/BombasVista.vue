@@ -221,7 +221,7 @@ const obtenerBombasAPI = async () => {
   errorApi.value = null;
   paginaActual.value = 1;
   try {
-    const { data } = await axios.get('/api/bombas');
+    const { data } = await axios.get('/bombas');
     listaBombas.value = data;
   } catch (error) {
     console.error("Error al cargar bombas:", error);
@@ -236,8 +236,8 @@ const cargarDependenciasFormularioAPI = async () => {
   errorDependencias.value = null;
   try {
     const [clientesRes, tiposBombaRes] = await Promise.all([
-      axios.get('/api/clientes'),
-      axios.get('/api/tipos_bomba')
+      axios.get('/clientes'),
+      axios.get('/tipos_bomba')
     ]);
     listaClientesParaForm.value = clientesRes.data;
     listaTiposBombaParaForm.value = tiposBombaRes.data;
@@ -292,10 +292,10 @@ const procesarGuardadoBomba = async (datosBombaDesdeFormulario) => {
     const payload = { ...datosBombaDesdeFormulario };
     let mensajeConfirmacion = '';
     if (esEdicionBomba.value) {
-      await axios.put(`/api/bombas/${payload.ID_Bomba}`, payload);
+      await axios.put(`/bombas/${payload.ID_Bomba}`, payload);
       mensajeConfirmacion = '¡Bomba actualizada correctamente!';
     } else {
-      await axios.post('/api/bombas', payload);
+      await axios.post('/bombas', payload);
       mensajeConfirmacion = '¡Bomba creada correctamente!';
     }
     cerrarModalBomba();
@@ -327,7 +327,7 @@ const ejecutarEliminacionBomba = async () => {
   cargandoEliminacionBomba.value = true;
   errorEliminacionBomba.value = null;
   try {
-    await axios.delete(`/api/bombas/${bombaAEliminar.value.ID_Bomba}`);
+    await axios.delete(`/bombas/${bombaAEliminar.value.ID_Bomba}`);
     cancelarEliminacionBomba();
     mostrarMensajeExitoTemporal('¡Bomba eliminada correctamente!');
     await obtenerBombasAPI();
@@ -357,7 +357,7 @@ const procesarGuardadoTipoBombaRapido = async (datosTipoBomba) => {
   errorFormularioTipoBombaRapido.value = null;
   cargandoFormularioTipoBombaRapido.value = true;
   try {
-    const { data } = await axios.post('/api/tipos_bomba', datosTipoBomba);
+    const { data } = await axios.post('/tipos_bomba', datosTipoBomba);
     
     await cargarDependenciasFormularioAPI(); 
     

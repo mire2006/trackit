@@ -27,7 +27,7 @@
     methods: {
       async recuperarContrasena() {
         try {
-          const response = await axios.post('/api/usuarios/recuperar-contrasena', {
+          const response = await axios.post('/usuarios/recuperar-contrasena', {
             identificador: this.identificador,
           });
           this.mensaje = response.data.mensaje; 

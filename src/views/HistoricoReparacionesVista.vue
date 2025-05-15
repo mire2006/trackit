@@ -117,7 +117,7 @@ const convertirImagenABase64ParaHistorico = (imgElement) => {
 const cargarListaBombas = async () => {
   cargandoBombas.value = true;
   try {
-    const response = await axios.get('/api/bombas');
+    const response = await axios.get('/bombas');
     listaCompletaBombas.value = response.data;
   } catch (error) {
     console.error("Error cargando lista de bombas:", error);
@@ -136,7 +136,7 @@ const cargarHistorialBomba = async (idBomba) => {
   cargandoHistorial.value = true;
   errorAlCargarHistorial.value = null;
   try {
-    const response = await axios.get(`/api/reparaciones/bomba/${idBomba}/informe`);
+    const response = await axios.get(`/reparaciones/bomba/${idBomba}/informe`);
     bombaSeleccionadaInfo.value = response.data;
     historialReparaciones.value = response.data.reparaciones || [];
   } catch (error) {

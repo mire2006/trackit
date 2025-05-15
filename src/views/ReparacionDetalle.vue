@@ -81,7 +81,7 @@ const cargarDetallesBombaYReparaciones = async () => {
   cargando.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/api/reparaciones/bomba/${bombaId.value}/informe`);
+    const response = await axios.get(`/reparaciones/bomba/${bombaId.value}/informe`);
     datosBombaYReparaciones.value = response.data;
   } catch (err) {
     console.error(`Error cargando detalles para bomba ID ${bombaId.value}:`, err);
