@@ -57,7 +57,7 @@ app.use((req, res, next) => {
 app.use('/api', routes);
 console.log('Router principal montado en /api');
 
-app.use('/qrcodes', express.static(path.join(__dirname, 'public/qrcodes')));
+app.use('/qrcodes', express.static('/mnt/render_disk_qrcodes'));
 
 
 const port = process.env.PORT || 3000;

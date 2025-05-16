@@ -79,19 +79,20 @@ async function crearBomba(bomba) {
     }
     const bombaId = insertResult.rows[0]['ID_Bomba'];
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const frontendUrl = process.env.FRONTEND_URL_PROD || process.env.FRONTEND_URL || 'http://localhost:8080'; 
     const qrData = `${frontendUrl}/reparaciones/bomba/${bombaId}`;
     
-    const qrDirectory = path.join(__dirname, '..', 'public', 'qrcodes'); 
-    const qrImagePath = path.join(qrDirectory, `bomba_${bombaId}.png`);
-    const qrDbPath = `/qrcodes/bomba_${bombaId}.png`; 
+    const qrDirectory = '/mnt/render_disk_qrcodes';
+    const qrFileName = `bomba_${bombaId}.png`;
+    const qrImagePath = path.join(qrDirectory, qrFileName);
+    const qrDbPath = `/qrcodes/${qrFileName}`;
 
     try {
-      await fs.mkdir(qrDirectory, { recursive: true });
+      await fs.mkdir(qrDirectory, { recursive: true }); 
       await QRCode.toFile(qrImagePath, qrData);
       console.log(`Código QR generado para bomba ${bombaId} en ${qrImagePath}`);
     } catch (qrError) {
-      console.error('Error al generar o guardar el código QR:', qrError);
+      console.error('Error al generar o guardar el código QR en el disco:', qrError); 
       await client.query('ROLLBACK');
       throw qrError;
     }
@@ -169,12 +170,15 @@ async function eliminarBomba(ID_Bomba) {
         const result = await client.query(deleteQuery, [ID_Bomba]);
 
         if (result.rowCount > 0 && bombaExistente && bombaExistente.qr_code) {
-            const qrPathAbsoluto = path.join(__dirname, '..', 'public', bombaExistente.qr_code);
+            const qrFileName = path.basename(bombaExistente.qr_code);
+            const qrDiskDirectory = '/mnt/render_disk_qrcodes';
+            const qrPathAbsolutoEnDisco = path.join(qrDiskDirectory, qrFileName);
+
             try {
-                await fs.unlink(qrPathAbsoluto);
-                console.log(`Archivo QR ${qrPathAbsoluto} eliminado.`);
+                await fs.unlink(qrPathAbsolutoEnDisco);
+                console.log(`Archivo QR ${qrPathAbsolutoEnDisco} eliminado del disco.`);
             } catch (fsError) {
-                console.warn(`No se pudo eliminar el archivo QR ${bombaExistente.qr_code} para bomba ${ID_Bomba}:`, fsError.message);
+                console.warn(`No se pudo eliminar el archivo QR ${qrPathAbsolutoEnDisco} para bomba ${ID_Bomba}:`, fsError.message);
             }
         }
         
@@ -183,7 +187,7 @@ async function eliminarBomba(ID_Bomba) {
 
     } catch (dbError) {
         await client.query('ROLLBACK');
-        if (dbError.code === '23503') {
+        if (dbError.code === '23503') { 
             throw new Error('No se puede eliminar la bomba porque tiene reparaciones asociadas.');
         }
         console.error('Error al eliminar bomba (DB):', dbError);
