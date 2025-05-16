@@ -7,7 +7,6 @@ const cors = require('cors');
 const session = require('express-session');
 const app = express();
 const path = require('path');
-const pg = require('pg');
 const pgSession = require('connect-pg-simple')(session);
 const pool = require('./db');
 
@@ -36,13 +35,15 @@ const sess = {
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: 'lax'
   }
 };
 
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
-  sess.cookie.secure = true;
+  sess.cookie.secure = true; 
+  sess.cookie.sameSite = 'none';
+} else {
+  sess.cookie.sameSite = 'lax';
 }
 
 app.use(session(sess));
@@ -50,7 +51,12 @@ app.use(session(sess));
 const routes = require('./routes');
 
 app.use((req, res, next) => {
-  console.log(`APP.JS - Solicitud entrante: ${req.method} ${req.originalUrl}`);
+  console.log(`APP.JS - Solicitud entrante: ${req.method} ${req.originalUrl} con sesión ID: ${req.sessionID}`);
+  if(req.session.usuario) {
+    console.log(`APP.JS - Usuario en sesión: ${req.session.usuario.Email}`);
+  } else {
+    console.log(`APP.JS - No hay usuario en sesión.`);
+  }
   next();
 });
 
@@ -58,7 +64,6 @@ app.use('/api', routes);
 console.log('Router principal montado en /api');
 
 app.use('/qrcodes', express.static('/mnt/render_disk_qrcodes'));
-
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
