@@ -100,7 +100,7 @@ const cambiarContrasena = async () => {
   }
 
   try {
-    await axios.put('/api/usuarios/me/password', {
+    await axios.put('/usuarios/me/password', {
       Contrasena: nuevaContrasena.value
     });
 
